@@ -200,8 +200,8 @@ public class DefaultCollectionStorage extends BaseCollectionProcessor
 					workflow = ProcessUtils.getOrCreateWorkflowData(user, xsiType,
 						collectId, projectId, EventUtils.REMOVE_CATALOG);
 					eventMeta = workflow.buildEvent();
-					removeResource(resource, rootPath, collectData.getItem(),
-						eventMeta, "OutFile");
+					removeResource(resource, rootPath, projectId, collectData.getItem(),
+								   eventMeta, "OutFile");
 					collectData.removeOut_file(i);
 					ProcessUtils.complete(workflow, eventMeta);
 				}
@@ -376,8 +376,8 @@ public class DefaultCollectionStorage extends BaseCollectionProcessor
 					{
 						EventMetaI eventMeta = EventUtils.DEFAULT_EVENT(user,
 							"Remove Catalog");
-						removeResource(resource, rootPath, collectData.getItem(),
-							eventMeta, "OutFile");
+						removeResource(resource, rootPath, projectData.getId(), collectData.getItem(),
+									   eventMeta, "OutFile");
 						collectData.removeOut_file(i);
 						saveCollectionData();
 						refreshCollectionData();

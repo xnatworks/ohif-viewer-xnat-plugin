@@ -269,12 +269,10 @@ public abstract class BaseCollectionProcessor
 		collectData = RoiUtils.getCollectionDataById(roiCollection.getId());
 	}
 
-	protected void removeResource(XnatResource resource, String rootPath,
-		ItemI item, EventMetaI eventMeta, String description) throws Exception
-	{
+	protected void removeResource(XnatResource resource, String rootPath, final String projectId, ItemI item, EventMetaI eventMeta, String description) {
 		try
 		{
-			resource.deleteWithBackup(rootPath, user, eventMeta);
+			resource.deleteWithBackup(rootPath, projectId, user, eventMeta);
 			SaveItemHelper.authorizedRemoveChild(item,
 				"xnat:imageAssessorData/out/file", resource.getItem(), user,
 				eventMeta);

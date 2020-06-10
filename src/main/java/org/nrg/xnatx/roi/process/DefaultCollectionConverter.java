@@ -279,7 +279,7 @@ public class DefaultCollectionConverter extends BaseCollectionProcessor
 					projectData.getId(), EventUtils.REMOVE_CATALOG);
 				eventMeta = workflow.buildEvent();
 				removeResource(resource, projectData.getArchiveRootPath(),
-					collectData.getItem(), eventMeta, "OutFile");
+							   projectData.getId(), collectData.getItem(), eventMeta, "OutFile");
 				collectData.removeOut_file(idx);
 				ProcessUtils.complete(workflow, eventMeta);
 				// Save and refresh after modification
@@ -315,8 +315,8 @@ public class DefaultCollectionConverter extends BaseCollectionProcessor
 					{
 						EventMetaI eventMeta = EventUtils.DEFAULT_EVENT(user,
 							"Remove Catalog");
-						removeResource(resource, rootPath, collectData.getItem(),
-							eventMeta, "OutFile");
+						removeResource(resource, rootPath, projectData.getId(), collectData.getItem(),
+									   eventMeta, "OutFile");
 						collectData.removeOut_file(i);
 						saveCollectionData();
 						refreshCollectionData();
