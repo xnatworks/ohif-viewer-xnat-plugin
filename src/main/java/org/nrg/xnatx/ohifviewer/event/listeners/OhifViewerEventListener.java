@@ -35,8 +35,10 @@
 package org.nrg.xnatx.ohifviewer.event.listeners;
 
 import org.nrg.xdat.om.WrkWorkflowdata;
+import org.nrg.xdat.om.XnatImagesessiondata;
 import org.nrg.xft.event.entities.WorkflowStatusEvent;
 import org.nrg.xft.event.persist.PersistentWorkflowUtils;
+import org.nrg.xft.security.UserI;
 import org.nrg.xnatx.ohifviewer.inputcreator.ImageSessionJsonCreator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +48,6 @@ import reactor.bus.EventBus;
 import reactor.fn.Consumer;
 
 import javax.inject.Inject;
-import org.nrg.xnatx.plugin.PluginUtils;
 
 import static reactor.bus.selector.Selectors.R;
 
@@ -86,19 +87,14 @@ public class OhifViewerEventListener
 		final WrkWorkflowdata workflow = (WrkWorkflowdata) wfsEvent.getWorkflow();
 		String pipelineName = workflow.getPipelineName();
 		String experimentId = workflow.getId();
+		UserI user = workflow.getUser();
 
-		logger.debug("Handling event in OhifViewerEventListener. PipelineName: "+
-			pipelineName+", datatype: "+workflow.getDataType()+", ID: "+
-			experimentId);
-
-		if (PluginUtils.isImageSessionData(experimentId, null))
-		{
-			logger.debug(
-				"Workflow event not referencing image session data, no JSON to be created.");
-			return;
+		if(logger.isDebugEnabled()){
+			logger.debug("Handling event in OhifViewerEventListener. PipelineName: "+
+					pipelineName+", datatype: "+workflow.getDataType()+", ID: "+
+					experimentId);
 		}
-		
-		// TODO If event is Transferred, Update and Folder Deleted, rebuild json.
+
 		if (pipelineName.equals("Transferred")
 			|| pipelineName.equals("Update")
 			|| pipelineName.equals("Folder Deleted")
@@ -110,10 +106,13 @@ public class OhifViewerEventListener
 			|| pipelineName.equals("Modified project")
 			|| pipelineName.equals("Configured project sharing"))
 		{
-			logger.debug(
-				"Rebuilding viewer JSON metadata for experiment: "+experimentId);
-			ImageSessionJsonCreator creator = new ImageSessionJsonCreator();
-			creator.create(experimentId);
+			XnatImagesessiondata sessionData =
+					XnatImagesessiondata.getXnatImagesessiondatasById(experimentId, user, false);
+			if(sessionData != null){
+				if(logger.isDebugEnabled()) logger.debug("Rebuilding viewer JSON metadata for experiment: " + experimentId);
+				ImageSessionJsonCreator creator = new ImageSessionJsonCreator();
+				creator.create(sessionData);
+			}
 		}
 	}
 

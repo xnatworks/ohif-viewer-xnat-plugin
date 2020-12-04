@@ -34,6 +34,17 @@
  *********************************************************************/
 package org.nrg.xnatx.ohifviewer.inputcreator;
 
+import org.apache.commons.io.IOUtils;
+import org.nrg.xdat.XDAT;
+import org.nrg.xdat.om.XnatImagesessiondata;
+import org.nrg.xft.security.UserI;
+import org.nrg.xnatx.ohifviewer.ViewerUtils;
+import org.nrg.xnatx.plugin.PluginException;
+import org.nrg.xnatx.plugin.PluginUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -41,15 +52,6 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Map;
-import org.apache.commons.io.IOUtils;
-import org.nrg.xdat.XDAT;
-import org.nrg.xdat.om.XnatImagesessiondata;
-import org.nrg.xnatx.ohifviewer.ViewerUtils;
-import org.nrg.xnatx.plugin.PluginException;
-import org.nrg.xnatx.plugin.PluginUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 
 /**
  *
@@ -65,18 +67,26 @@ public class ImageSessionJsonCreator
 	private static final String xnatArchivePath =
 		XDAT.getSiteConfigPreferences().getArchivePath();
 
-	public HttpStatus create(String sessionId)
-	{
-		XnatImagesessiondata sessionData;
+
+	public HttpStatus create(String sessionId) {
+		return create(sessionId);
+	}
+
+	public HttpStatus create(String sessionId, UserI user) {
 		try
 		{
-			sessionData = PluginUtils.getImageSessionData(sessionId, null);
+			return create(PluginUtils.getImageSessionData(sessionId, user));
 		}
 		catch (PluginException ex)
 		{
 			logger.info(ex.getMessage());
 			return HttpStatus.UNPROCESSABLE_ENTITY;
 		}
+	}
+
+	public HttpStatus create(XnatImagesessiondata sessionData)
+	{
+		String sessionId = sessionData.getId();
 		Map<String,String> seriesUidToScanIdMap =
 			PluginUtils.getImageScanUidIdMap(sessionData);
 
