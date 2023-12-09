@@ -173,342 +173,336 @@
   };
 })(jQuery);
 
+//############################################################//
+
 function checkSessionJSON(newTab, projectId, subjectId, experimentId, parentProjectId) {
   $('body').pleaseWait();
 
-  // JPETTS: Define a request to XNAT to check if specified JSON data exists
-  var oReq = new XMLHttpRequest();
-  var url = XNAT.url.rootUrl("/xapi/viewer/projects/" + projectId + "/experiments/" + experimentId + "/exists");
+  const jsonRootUrl = XNAT.url.rootUrl("/xapi/viewer/projects/");
+  const jsonUrl = jsonRootUrl + projectId + "/experiments/" + experimentId;
+  const jsonExistsUrl = jsonUrl + "/exists";
 
-  // Listeners
-  oReq.addEventListener('error', function () {
-    $('body').pleaseWait('stop');
-    console.error('Error in REST call!');
-  });
-
-  oReq.addEventListener('abort', function () {
-    $('body').pleaseWait('stop');
-    console.error('Request was aborted for some reason. Please contact your System Administrator.');
-  });
-
-  oReq.addEventListener('load', function () {
-    if (oReq.status === 200) {
-      // 200 === OK
-      console.log('JSON for this session found!');
-      console.log('Loading viewer with this JSON.');
-
-      checkJSONAndOpenViewer(newTab, projectId, subjectId, experimentId, parentProjectId);
-    } else if (oReq.status === 404) {
-      // 404 === NOT_FOUND
-      generateJSONOpenViewer(newTab, projectId, subjectId, experimentId, parentProjectId);
-    } else if (oReq.status === 403) {
-      $('body').pleaseWait('stop');
-      console.log('Incorrect permissions');
-    } else {
-      $('body').pleaseWait('stop');
-      console.log("unsuccessful, status: " + oReq.status);
+  checkJsonExists(
+    jsonExistsUrl
+  ).then(existsResult => {
+    return processJsonExistsResult(existsResult, jsonUrl, experimentId);
+  }).then(viewerSession => {
+    if (viewerSession.type === 'JSON') {
+      return getSessionViewerParams(projectId, subjectId, experimentId);
+    } else if (viewerSession.type === 'DICOMWEB') {
+      return processDicomwebSession(projectId, subjectId, experimentId);
     }
+  }).then(viewerParams => {
+    return openViewer(viewerParams, newTab, parentProjectId);
+  }).catch(error => {
+    const errorMessage = error.message || 'Unknown error!';
+    console.error(error);
+    XNAT.dialog.message('Error', errorMessage);
+  }).finally(() => {
+    $('body').pleaseWait('stop');
   });
-
-  // REST GET call
-  oReq.open('GET', url);
-  oReq.setRequestHeader('Accept', 'application/json');
-  oReq.send();
-
 }
 
-function checkSubjectForSessionJSON(newTab, projectId, subjectId, parentProjectId) {
-  const subjectExperimentListUrl = XNAT.url.rootUrl('/data/archive/projects/'+ projectId + "/subjects/" + subjectId + "/experiments?format=json");
-
-  console.log(subjectExperimentListUrl);
-
-  const xhr = new XMLHttpRequest();
-
-  xhr.addEventListener('error', function () {
-    $('body').pleaseWait('stop');
-    console.error('Error in REST call!');
-  });
-
-  xhr.addEventListener('abort', function () {
-    $('body').pleaseWait('stop');
-    console.error('Request was aborted for some reason. Please contact your System Administrator.');
-  });
-
-  xhr.onload = function () {
-    const experimentList = xhr.response.ResultSet.Result;
-
-    console.log("on load, experimentList:");
-    console.log(experimentList);
-
-    let sessionsChecked = 0;
-    const sessionsThatNeedJSON = [];
-
-    const xhrExists = [];
-    for (let i = 0; i < experimentList.length; i++) {
-      const experimentId = experimentList[i].ID;
-      const experimentLabel = experimentList[i].label;
-      const experimentExistsUrl = XNAT.url.rootUrl("/xapi/viewer/projects/" + projectId + "/experiments/" + experimentId + "/exists");
-
-      xhrExists[i] = new XMLHttpRequest();
-
-      console.log(experimentExistsUrl);
-
-      xhrExists[i].onload = function () {
-        console.log(this.status);
-
-        if (this.status === 404) {
-          sessionsThatNeedJSON.push({
-            ID: experimentId,
-            label: experimentLabel
-          });
-        }
-        sessionsChecked++;
-        console.log(sessionsChecked);
-        if (sessionsChecked === experimentList.length) {
-          generateJSONOpenSubjectViewer(sessionsThatNeedJSON, newTab, projectId, subjectId, parentProjectId);
-        }
-      }
-
-      xhrExists[i].addEventListener('error', function () {
-        $('body').pleaseWait('stop');
-        console.error('Error in REST call!');
-      });
-
-      xhrExists[i].addEventListener('abort', function () {
-        $('body').pleaseWait('stop');
-        console.error('Request was aborted for some reason. Please contact your System Administrator.');
-      });
-
-      xhrExists[i].open("GET", experimentExistsUrl);
-      xhrExists[i].responseType = "json";
-      xhrExists[i].send();
-    }
-
-  };
-
-
-  console.log("GET " + subjectExperimentListUrl);
-  xhr.open("GET", subjectExperimentListUrl);
-  xhr.responseType = "json";
-  xhr.send();
-}
-
-function generateJSONOpenSubjectViewer(sessionsThatNeedJSON, newTab, projectId, subjectId, parentProjectId) {
-  console.log(sessionsThatNeedJSON);
-
-  if (sessionsThatNeedJSON.length === 0) {
-    openSubjectView(newTab, projectId, subjectId, parentProjectId);
-    return;
-  }
-
-  $('body').pleaseWait('stop');
-  const waitDialog = XNAT.dialog.static.wait(
-      "Please wait, generating viewer metadata for sessions: " + sessionsThatNeedJSON.map(s => s.label).join(", ") +
-      ". This is a one-time operation that may take a few minutes if the sessions are large. " +
-      "When it is complete, the viewer will open."
+function checkJsonExists(jsonExistsUrl) {
+  return xov_xhrPromise(
+    jsonExistsUrl,
+    { method: 'GET', accept: 'application/json' }
   );
+}
 
-  let sessionsGenerated = 0;
-  let sessionsFailed = 0;
-  const xhrGenerate = [];
-  for (let i = 0; i < sessionsThatNeedJSON.length; i++) {
-    const experimentId = sessionsThatNeedJSON[i].ID;
-    const experimentExistsUrl = XNAT.url.rootUrl("/xapi/viewer/projects/" + projectId + "/experiments/" + experimentId);
-
-    xhrGenerate[i] = new XMLHttpRequest();
-
-    console.log(experimentExistsUrl);
-
-    xhrGenerate[i].onload = function () {
-      console.log(this.status);
-
-      if (this.status === 200) {
-        sessionsGenerated++;
-      } else {
-        sessionsFailed++;
-      }
-
-      console.log(sessionsGenerated);
-      if (sessionsGenerated === sessionsThatNeedJSON.length) {
-        openSubjectView(newTab, projectId, subjectId, parentProjectId);
-      } else if (sessionsGenerated + sessionsFailed === sessionsThatNeedJSON.length) {
-        waitDialog.close();
-        XNAT.dialog.alert("Error", "Unable to generate viewer metadata for " + sessionsFailed +
-            " sessions. Please check the server logs for more information.")
-      }
-    }
-
-    xhrGenerate[i].open("GET", experimentExistsUrl);
-    xhrGenerate[i].responseType = "json";
-    xhrGenerate[i].send();
+function processJsonExistsResult(existsResult, jsonUrl, experimentId) {
+  const { status, responseText } = existsResult;
+  switch (status) {
+    case 200:
+      console.log('JSON found for session ' + experimentId);
+      return getViewerSessionJson(jsonUrl)
+        .then(studyList => checkValidJsonOrDicomweb(studyList));
+    case 404:
+      console.log('Generating JSON for session ' + experimentId);
+      return generateViewerSessionJson(jsonUrl)
+        .then(() => getViewerSessionJson(jsonUrl))
+        .then(studyList => checkValidJsonOrDicomweb(studyList));
+    default:
+      throw new Error('Unsuccessful, status: ' + status);
   }
 }
 
-function openSubjectView(newTab, projectId, subjectId, parentProjectId) {
-  var params = '?subjectId=' + subjectId + '&projectId=' + projectId;
+function getSessionViewerParams(projectId, subjectId, experimentId) {
+  const sessionUrl = XNAT.url.rootUrl("/data/archive/projects/" + projectId + "/subjects/" + subjectId + "/experiments/" + experimentId + "?format=json");
 
-  openViewer(params, newTab, parentProjectId);
+  console.log("Get session viewer Params, URL: " + sessionUrl);
+
+  return xov_xhrPromise(
+    sessionUrl,
+    { method: 'GET' }
+  ).then(result => {
+    if (result.status === 200) {
+      const jsonString = result.responseText;
+      const sessionJSON = JSON.parse(jsonString);
+
+      const params = '?subjectId=' + subjectId +
+        '&projectId=' + projectId +
+        '&experimentId=' + experimentId +
+        '&experimentLabel=' + sessionJSON.items[0].data_fields.label;
+
+      return params;
+    }
+  });
 }
 
-function checkJSONAndOpenViewer(newTab, projectId, subjectId, experimentId, parentProjectId) {
-  // Fetch JSON
-  var oReq = new XMLHttpRequest();
+function processDicomwebSession(projectId, subjectId, experimentId) {
+  const dwRootUrl = XNAT.url.rootUrl("/xapi/viewerDicomweb/projects/");
+  const dwUrl = dwRootUrl + projectId + "/experiments/" + experimentId;
+  const dwExistsUrl = dwUrl + "/exists";
 
-  // Listeners
-  oReq.addEventListener('error', function () {
-    $('body').pleaseWait('stop');
-    console.error('Error in REST call!');
+  return xov_xhrPromise(
+    dwExistsUrl,
+    { method: 'GET' }
+  ).then(existsResult => {
+    const { status } = existsResult;
+    if (subjectId) {
+      // Session-level viewer
+      switch (status) {
+        case 200:
+          console.log('DICOMweb data found for session ' + experimentId);
+          return getSessionViewerParams(projectId, subjectId, experimentId);
+        case 404:
+          return generateViewerSessionDicomweb(dwUrl)
+            .then(() => (
+              getSessionViewerParams(projectId, subjectId, experimentId)
+            ));
+        default:
+          throw new Error('Unsuccessful, status: ' + status);
+      }
+    } else {
+      // Subject-level viewer
+      switch (status) {
+        case 200:
+          console.log('DICOMweb data found for session ' + experimentId);
+          return Promise.resolve(true);
+        case 404:
+          return generateViewerSessionDicomweb(dwUrl)
+            .then(() => (
+              Promise.resolve(true)
+            ));
+        default:
+          throw new Error('Unsuccessful, status: ' + status);
+      }
+    }
   });
+}
 
-  oReq.addEventListener('abort', function () {
-    $('body').pleaseWait('stop');
-    console.error('Request was aborted for some reason. Please contact your System Administrator.');
-  });
-
-  oReq.addEventListener('load', function () {
-    if (oReq.status === 200) {
-      console.log('JSON found.. checking!');
-      // TODO -> Check the json!
-      console.log(oReq);
-
-      var jsonString = oReq.responseText;
-      var studyList = JSON.parse(jsonString); //parses the query result
-
+function getViewerSessionJson(jsonUrl) {
+  return xov_xhrPromise(
+    jsonUrl,
+    { method: 'GET', accept: 'application/json' }
+  ).then(result => {
+    if (result.status === 200) {
+      const studyList = JSON.parse(result.responseText);
       console.log(studyList);
+      return studyList;
+    } else {
+      throw new Error(result.responseText)
+    }
+  });
+}
 
-      if (studyListEmpty(studyList)) {
-        $('body').pleaseWait('stop');
+function checkValidJsonOrDicomweb(studyList) {
+  return new Promise((resolve, reject) => {
+    if (!studyList.studies) {
+      reject(new Error('Invalid studyList object.'));
+      return;
+    }
 
-        XNAT.dialog.message(
-            'No viewable scans',
-            "There are no scans in this session compatible with the OHIF Viewer."
-        );
-        return;
+    if (studyList.isDicomWeb) {
+      resolve({ type: 'DICOMWEB', isValid: true });
+      return;
+    }
+
+    let isEmpty = true;
+
+    for (let i = 0; i < studyList.studies.length; i++) {
+
+      if (!studyList.studies[i] || !studyList.studies[i].series) {
+        continue;
       }
 
-      getLabelAndOpenViewer(newTab, projectId, subjectId, experimentId, parentProjectId);
-    } else if (oReq.status === 403) {
-      console.log('Incorrect permissions');
+      const series = studyList.studies[i].series;
 
-      $('body').pleaseWait('stop');
-
-    } else {
-      console.log("unsuccessful, status: " + oReq.status);
-
-      $('body').pleaseWait('stop');
-    }
-  });
-
-  var jsonRequestUrl = XNAT.url.rootUrl("/xapi/viewer/projects/" + projectId + "/experiments/" + experimentId);
-
-  // REST GET call
-  oReq.open('GET', jsonRequestUrl);
-  oReq.setRequestHeader('Accept', 'application/json');
-  oReq.send();
-}
-
-function studyListEmpty(studyList) {
-  if (!studyList.studies) {
-    console.log('invalid studyList object');
-    return true;
-  }
-
-  var empty = true;
-
-  for (var i = 0; i < studyList.studies.length; i++) {
-
-    if (!studyList.studies[i] || !studyList.studies[i].series) {
-      continue;
-    }
-
-    var series = studyList.studies[i].series;
-
-    for (var j = 0; j < series.length; j++) {
-      if (series[j].instances.length) {
-        empty = false;
-        break;
+      for (let j = 0; j < series.length; j++) {
+        if (series[j].instances.length) {
+          isEmpty = false;
+          break;
+        }
       }
     }
-  }
 
-  return empty;
-}
-
-function generateJSONOpenViewer(newTab, projectId, subjectId, experimentId, parentProjectId) {
-  var oReq = new XMLHttpRequest();
-  var url = XNAT.url.rootUrl("/xapi/viewer/projects/" + projectId + "/experiments/" + experimentId);
-  console.log("Opening GET XMLHttpRequest to: " + url);
-
-  oReq.addEventListener('load', function () {
-
-    console.log("Request returned, status: " + oReq.status);
-
-    if (oReq.status === 200) {
-      console.log('JSON has been created!');
-      checkJSONAndOpenViewer(newTab, projectId, subjectId, experimentId, parentProjectId);
-    } else if (oReq.status === 403) {
-      console.log('Incorrect permissions');
-
-      $('body').pleaseWait('stop');
-
-    } else {
-      console.log("unsuccessful, status: " + oReq.status);
-
-      $('body').pleaseWait('stop');
-    }
-  });
-
-  // REST POST call
-  oReq.open('GET', url);
-  oReq.setRequestHeader('Accept', 'application/json');
-  oReq.send();
-
-  $('body').pleaseWait('stop');
-
-  XNAT.dialog.static.wait(
-      "Please wait... generating viewer metadata for session " + experimentLabel + ". This is a one-time operation that may take a few minutes if the session is very large. When complete, the viewer will open."
-  );
-}
-
-function getLabelAndOpenViewer(newTab, projectId, subjectId, experimentId, parentProjectId) {
-  var params = '?subjectId=' + subjectId + '&projectId=' + projectId + '&experimentId=' + experimentId;
-
-  var oReq = new XMLHttpRequest();
-  var sessionUrl = XNAT.url.rootUrl("/data/archive/projects/" + projectId + "/subjects/" + subjectId + "/experiments/" + experimentId + "?format=json");
-
-  console.log("Opening GET XMLHttpRequest to: " + sessionUrl);
-
-  oReq.addEventListener('load', function () {
-    console.log("Request returned, status: " + oReq.status);
-
-    if (oReq.status === 200) {
-      var jsonString = oReq.responseText;
-
-      var sessionJSON = JSON.parse(jsonString);
-
-      params = params +  '&experimentLabel=' + sessionJSON.items[0].data_fields.label;
+    if (isEmpty) {
+      reject(new Error(
+        'No viewable scans: ' +
+        'There are no scans in this session compatible with the OHIF Viewer.'
+      ));
+      return;
     }
 
-    openViewer(params, newTab, parentProjectId);
+    resolve({ type: 'JSON', isValid: true });
   });
-
-  // Fetch session info to grab label, as its often not in XNAT.data.context.
-  oReq.open('GET', sessionUrl);
-  oReq.send();
 }
 
+function generateViewerSessionJson(jsonUrl) {
+  return xov_xhrPromise(jsonUrl, { method: 'POST' });
+}
+
+function generateViewerSessionDicomweb(dwUrl) {
+  return xov_xhrPromise(dwUrl, { method: 'POST' });
+}
 
 function openViewer(params, newTab, parentProjectId) {
   if (parentProjectId) {
     params = params + '&parentProjectId=' + parentProjectId;
   }
 
-  var openViewerUrl = XNAT.url.rootUrl('/VIEWER' + params);
+  const openViewerUrl = XNAT.url.rootUrl('/VIEWER' + params);
 
   if (newTab) {
     window.open(openViewerUrl);
-    $('body').pleaseWait('stop');
   } else {
     window.location.href = openViewerUrl;
   }
+}
+
+//############################################################//
+
+function checkSubjectForSessionJSON(newTab, projectId, subjectId, parentProjectId) {
+  const subjectExperimentListUrl = XNAT.url.rootUrl('/data/archive/projects/'+ projectId + "/subjects/" + subjectId + "/experiments?format=json");
+
+  console.log(subjectExperimentListUrl);
+
+  const jsonRootUrl = XNAT.url.rootUrl("/xapi/viewer/projects/" + projectId + "/experiments/");
+
+  let experimentList = [];
+  let waitDialog;
+
+  getSubjectExperimentList(
+    subjectExperimentListUrl
+  ).then(exptListRsp => {
+    if (exptListRsp.status !== 200) {
+      throw new Error(
+        'Unable to retrieve experiments for Subject ' +
+        subjectId
+      );
+    }
+    const jsonResponse = JSON.parse(exptListRsp.response);
+    experimentList = jsonResponse.ResultSet.Result;
+    console.log(experimentList);
+    if (experimentList.length === 0) {
+      throw new Error(
+        'Could not find experiments for Subject ' +
+        subjectId
+      );
+    }
+    // Append JSON session URLs to the experiment list
+    experimentList.forEach(expt => {
+      expt.jsonUrl = jsonRootUrl + expt.ID;
+      expt.jsonExistsUrl = expt.jsonUrl + "/exists";
+    });
+    return Promise.all(experimentList.map(expt => (
+      checkJsonExists(expt.jsonExistsUrl)
+    )));
+  }).then(existsResults => {
+    const someHasNoJson = existsResults.some(
+      exists => exists.status === 404
+    );
+    if (someHasNoJson) {
+      waitDialog = XNAT.dialog.static.wait(
+        "Please wait, generating viewer metadata. " +
+        "This is a one-time operation that may take a few minutes if the sessions are large. " +
+        "When it is complete, the viewer will open."
+      );
+    }
+    return Promise.all(existsResults.map((existsResult, index) => (
+      processJsonExistsResult(
+        existsResult,
+        experimentList[index].jsonUrl,
+        experimentList[index].ID
+      )
+    )));
+  }).then(viewerSessions => {
+    return Promise.all(viewerSessions.map((viewerSession, index) => {
+      if (viewerSession.type === 'JSON') {
+        return Promise.resolve(true);
+      } else if (viewerSession.type === 'DICOMWEB') {
+        return processDicomwebSession(projectId, undefined, experimentList[index].ID);
+      }
+    }));
+  }).then(() => {
+    const viewerParams = '?subjectId=' + subjectId + '&projectId=' + projectId;
+    return openViewer(viewerParams, newTab, parentProjectId);
+  }).catch(error => {
+    const errorMessage = error.message || 'Unknown error!';
+    console.error(error);
+    XNAT.dialog.message('Error', errorMessage);
+  }).finally(() => {
+    if (waitDialog) {
+      waitDialog.close();
+    }
+  });
+}
+
+function getSubjectExperimentList(url) {
+  return xov_xhrPromise(url, { method: 'GET' });
+}
+
+//############################################################//
+
+function xov_xhrPromise(url, options) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const { method, accept } = options;
+
+    const requestMethod = method || 'GET';
+
+    xhr.onload = () => {
+      if (xhr.status === 200 || xhr.status === 201) {
+        resolve({
+          status: xhr.status,
+          responseText: xhr.responseText,
+          response: xhr.response,
+        });
+      } else if (xhr.status === 404) {
+        resolve({
+          status: xhr.status,
+          responseText: 'Session viewer data does not exist',
+        });
+      } else if (xhr.status === 501) {
+        // DICOMweb not supported
+        resolve({
+          status: xhr.status,
+          responseText: xhr.responseText,
+        });
+      } else if (xhr.status === 403) {
+        reject(new Error('Incorrect permissions'));
+      } else {
+        reject(new Error('Unsuccessful, status: ' + xhr.status));
+      }
+    };
+
+    xhr.onabort = () => {
+      reject({ status: 0 });
+    };
+
+    xhr.onerror = () => {
+      reject({ status: xhr.status });
+    };
+
+    xhr.ontimeout = () => {
+      reject({ status: 504 });
+    };
+
+    xhr.open(requestMethod, url);
+    if (accept) {
+      xhr.setRequestHeader('Accept', accept);
+    }
+    xhr.send();
+  });
 }

@@ -39,8 +39,10 @@ import org.dcm4che3.io.DicomInputStream;
 import org.dcm4che3.io.DicomOutputStream;
 import org.dcm4che3.json.JSONWriter;
 import org.nrg.xdat.om.XnatImagesessiondata;
+import org.nrg.xnatx.dicomweb.conf.DicomwebDeviceConfiguration;
 import org.nrg.xnatx.plugin.PluginCode;
 import org.nrg.xnatx.plugin.PluginException;
+import org.nrg.xnatx.plugin.PluginUtils;
 
 import javax.json.*;
 import java.io.*;
@@ -57,11 +59,11 @@ public class DicomwebUtils
 {
 	static final EnumSet<VR> encodeAsJSONNumber = EnumSet.noneOf(VR.class);
 
-	public static JSONWriter encodeAsJSONNumber(JSONWriter writer)
+	public static boolean isSessionValidForDicomweb(
+		XnatImagesessiondata sessionData)
 	{
-		encodeAsJSONNumber.forEach(
-			vr -> writer.setJsonType(vr, JsonValue.ValueType.NUMBER));
-		return writer;
+		String modality = PluginUtils.getImageSessionModality(sessionData);
+		return DicomwebDeviceConfiguration.isDicomwebModality(modality);
 	}
 
 	public static Attributes decodeAttributes(byte[] b) throws IOException
@@ -104,6 +106,13 @@ public class DicomwebUtils
 		}
 	}
 
+	public static JSONWriter encodeAsJSONNumber(JSONWriter writer)
+	{
+		encodeAsJSONNumber.forEach(
+			vr -> writer.setJsonType(vr, JsonValue.ValueType.NUMBER));
+		return writer;
+	}
+
 	public static byte[] encodeAttributes(Attributes attrs)
 		throws IOException
 	{
@@ -136,22 +145,6 @@ public class DicomwebUtils
 		return bout.toByteArray();
 	}
 
-	public static Integer getInt(Attributes attrs, int tag, String defVal)
-	{
-		String val = attrs.getString(tag, defVal);
-		if (val != null)
-		{
-			try
-			{
-				return Integer.valueOf(val);
-			}
-			catch (NumberFormatException ignored)
-			{
-			}
-		}
-		return null;
-	}
-
 	public static String generateEmptySessionJson(String sessionId,
 		String studyUid) throws PluginException
 	{
@@ -167,7 +160,7 @@ public class DicomwebUtils
 		JsonObject jsonObject = root.build();
 
 		String jsonString;
-		try(Writer writer = new StringWriter())
+		try (Writer writer = new StringWriter())
 		{
 			Json.createWriter(writer).write(jsonObject);
 			jsonString = writer.toString();
@@ -180,6 +173,22 @@ public class DicomwebUtils
 		}
 
 		return jsonString;
+	}
+
+	public static Integer getInt(Attributes attrs, int tag, String defVal)
+	{
+		String val = attrs.getString(tag, defVal);
+		if (val != null)
+		{
+			try
+			{
+				return Integer.valueOf(val);
+			}
+			catch (NumberFormatException ignored)
+			{
+			}
+		}
+		return null;
 	}
 
 	public static Map<String,String> getXnatIds(XnatImagesessiondata sessionData)

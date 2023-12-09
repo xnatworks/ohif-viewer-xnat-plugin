@@ -66,21 +66,26 @@ public class DicomwebInputHandler
 		this.dwDataService = dwDataService;
 	}
 
-	public void createDicomwebData(String sessionId, UserI user)
-		throws PluginException
+	public void createDicomwebData(String sessionId, UserI user,
+		boolean overwriteExisting)	throws PluginException
 	{
+		if (user == null)
+		{
+			throw new PluginException("User must not be null",
+				PluginCode.HttpUnprocessableEntity);
+		}
 		XnatImagesessiondata sessionData = PluginUtils.getImageSessionData(
 			sessionId, user);
-		createDicomwebData(sessionData, user);
+		createDicomwebData(sessionData, overwriteExisting);
 	}
 
-	public void createDicomwebData(XnatImagesessiondata sessionData, UserI user)
+	public void createDicomwebData(XnatImagesessiondata sessionData)
 		throws PluginException
 	{
-		createDicomwebData(sessionData, user, false);
+		createDicomwebData(sessionData, false);
 	}
 
-	public void createDicomwebData(XnatImagesessiondata sessionData, UserI user,
+	public void createDicomwebData(XnatImagesessiondata sessionData,
 		boolean overwriteExisting) throws PluginException
 	{
 		if (sessionData == null)
@@ -88,15 +93,15 @@ public class DicomwebInputHandler
 			throw new PluginException("SessionData must not be null",
 				PluginCode.HttpUnprocessableEntity);
 		}
-		if (user == null)
-		{
-			throw new PluginException("User must not be null",
-				PluginCode.HttpUnprocessableEntity);
-		}
-
-		checkValidDicomwebConfiguration(sessionData);
 
 		String sessionId = sessionData.getId();
+
+		if (!DicomwebUtils.isSessionValidForDicomweb(sessionData))
+		{
+			log.warn(
+				"Session {} is not supported for DICOMweb data generation", sessionId);
+			return;
+		}
 
 		DwStudy prevStudy = dwDataService.getStudyBySessionId(sessionId, false);
 
@@ -121,6 +126,27 @@ public class DicomwebInputHandler
 			throw new PluginException(
 				"Unable to create DICOMweb data for session " + sessionId, e);
 		}
+	}
+
+	public void deleteDicomwebData(XnatImagesessiondata sessionData)
+		throws PluginException
+	{
+		if (sessionData == null)
+		{
+			throw new PluginException("SessionData must not be null",
+				PluginCode.HttpUnprocessableEntity);
+		}
+
+		String sessionId = sessionData.getId();
+
+		DwStudy study = dwDataService.getStudyBySessionId(sessionId, false);
+		if (study == null)
+		{
+			throw new PluginException("SessionData must not be null",
+				PluginCode.HttpNotFound);
+		}
+
+		dwDataService.deleteStudy(study);
 	}
 
 	public boolean hasValidDicomwebData(XnatImagesessiondata sessionData)

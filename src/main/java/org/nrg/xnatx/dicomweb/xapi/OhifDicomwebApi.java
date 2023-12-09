@@ -38,11 +38,12 @@ import io.swagger.annotations.*;
 import lombok.extern.slf4j.Slf4j;
 import org.dcm4che3.util.StringUtils;
 import org.nrg.framework.annotations.XapiRestController;
-import org.nrg.xapi.rest.AbstractXapiRestController;
-import org.nrg.xapi.rest.Experiment;
-import org.nrg.xapi.rest.Project;
-import org.nrg.xapi.rest.XapiRequestMapping;
+import org.nrg.xapi.rest.*;
+import org.nrg.xdat.model.XnatSubjectassessordataI;
+import org.nrg.xdat.om.XnatExperimentdata;
 import org.nrg.xdat.om.XnatImagesessiondata;
+import org.nrg.xdat.om.XnatProjectdata;
+import org.nrg.xdat.om.XnatSubjectdata;
 import org.nrg.xdat.security.helpers.AccessLevel;
 import org.nrg.xdat.security.services.RoleHolder;
 import org.nrg.xdat.security.services.UserManagementServiceI;
@@ -68,9 +69,13 @@ import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -108,6 +113,48 @@ public class OhifDicomwebApi extends AbstractXapiRestController
 	############################################################
 	*/
 
+	@ApiOperation(value = "Remove DICOMweb data for the specified experiment ID.")
+	@ApiResponses(
+		{
+			@ApiResponse(code = 200, message = "OK, the session DICOMweb deleted."),
+			@ApiResponse(code = 403, message = "The user does not have permission to delete the indicated experiment."),
+			@ApiResponse(code = 404, message = "The specified DICOMweb does not exist."),
+			@ApiResponse(code = 500, message = "An unexpected error occurred."),
+			@ApiResponse(code = 501, message = "SOP Class or modality not supported."),
+		})
+	@XapiRequestMapping(
+		value = "projects/{projectId}/experiments/{experimentId}",
+		method = RequestMethod.DELETE,
+		restrictTo = AccessLevel.Admin)
+	public ResponseEntity<String> deleteExperimentDicomweb(
+		final @ApiParam(value = "Project ID") @PathVariable("projectId") @Project String projectId,
+		final @ApiParam(value = "Experiment ID") @PathVariable("experimentId") @Experiment String experimentId)
+		throws PluginException
+	{
+		UserI user = getSessionUser();
+		XnatImagesessiondata sessionData = checkPermissions(user, projectId,
+			experimentId, Security.Delete);
+
+		if (!DicomwebUtils.isSessionValidForDicomweb(sessionData))
+		{
+			return new ResponseEntity<>(
+				"Session "+experimentId+" is not supported for DICOMweb",
+				HttpStatus.NOT_IMPLEMENTED);
+		}
+
+		log.info("DicomwebApi::deleteExperimentDicomweb(projectId="+projectId+
+							 ", experimentId="+experimentId+")");
+		if (log.isDebugEnabled())
+		{
+			log.debug("DELETE /projects/"+projectId+"/experiments/"+experimentId+
+									" by user "+user.getUsername());
+		}
+
+		dwInputHandler.deleteDicomwebData(sessionData);
+
+		return new ResponseEntity<>(HttpStatus.OK);
+	}
+
 	@ApiOperation(value = "Checks if Session level DICOMweb exists")
 	@ApiResponses(
 		{
@@ -130,6 +177,13 @@ public class OhifDicomwebApi extends AbstractXapiRestController
 		XnatImagesessiondata sessionData = checkPermissions(user, projectId,
 			experimentId, Security.Read);
 
+		if (!DicomwebUtils.isSessionValidForDicomweb(sessionData))
+		{
+			return new ResponseEntity<>(
+				"Session "+experimentId+" is not supported for DICOMweb",
+				HttpStatus.NOT_IMPLEMENTED);
+		}
+
 		if (!dwInputHandler.hasValidDicomwebData(sessionData))
 		{
 			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -141,7 +195,45 @@ public class OhifDicomwebApi extends AbstractXapiRestController
 	@ApiResponses(
 		{
 			@ApiResponse(code = 201, message = "The DICOMweb data has been created."),
-			@ApiResponse(code = 403, message = "The user does not have permission to post to the indicated experiment."),
+			@ApiResponse(code = 403, message = "The user does not have permission to perform this action."),
+			@ApiResponse(code = 423, message = "This process is already underway and is locked."),
+			@ApiResponse(code = 500, message = "An unexpected error occurred."),
+			@ApiResponse(code = 501, message = "SOP Class or modality not supported."),
+		})
+	@XapiRequestMapping(
+		value = "generate-all-dicomweb",
+		method = RequestMethod.POST,
+		restrictTo = AccessLevel.Admin
+	)
+	public ResponseEntity<String> postAllExperimentsDicomweb(
+		final @ApiParam(value = "Overwrite existing data")
+		@RequestParam(value = "overwrite", required = false, defaultValue = "false") boolean overwrite)
+		throws PluginException
+	{
+		// Prevent starting the generation process if another one is already running
+		if (!genAllDwDataLock.tryLock())
+		{
+			return new ResponseEntity<>(HttpStatus.LOCKED);
+		}
+		HttpStatus status;
+		try
+		{
+			log.info("All projects DICOMweb data creation requested");
+			status = generateAllDwData(overwrite);
+			log.info("All projects DICOMweb data creation complete");
+		}
+		finally
+		{
+			genAllDwDataLock.unlock();
+		}
+		return new ResponseEntity<>(status);
+	}
+
+	@ApiOperation(value = "Generates DICOMweb data for the specified experiment ID.")
+	@ApiResponses(
+		{
+			@ApiResponse(code = 201, message = "The DICOMweb data has been created."),
+			@ApiResponse(code = 403, message = "The user does not have permission to perform this action."),
 			@ApiResponse(code = 500, message = "An unexpected error occurred."),
 			@ApiResponse(code = 501, message = "SOP Class or modality not supported."),
 		})
@@ -162,10 +254,95 @@ public class OhifDicomwebApi extends AbstractXapiRestController
 			experimentId, Security.Edit, Security.Read);
 
 		log.info("Session " + experimentId + " DICOMweb data creation requested");
-		dwInputHandler.createDicomwebData(sessionData, user, overwrite);
+		dwInputHandler.createDicomwebData(sessionData, overwrite);
 		log.info("Session " + experimentId + " DICOMweb data creation complete");
 
 		return new ResponseEntity<>(HttpStatus.OK);
+	}
+
+	@ApiOperation(value = "Generates DICOMweb data for every session in the project.")
+	@ApiResponses(
+		{
+			@ApiResponse(code = 201, message = "The DICOMweb data has been created for every session in the project."),
+			@ApiResponse(code = 403, message = "The user does not have permission to perform this action."),
+			@ApiResponse(code = 423, message = "This process is already underway and is locked."),
+			@ApiResponse(code = 500, message = "An unexpected error occurred."),
+			@ApiResponse(code = 501, message = "SOP Class or modality not supported."),
+		})
+	@XapiRequestMapping(
+		value = "projects/{projectId}",
+		method = RequestMethod.POST,
+		restrictTo = AccessLevel.Admin
+	)
+	public ResponseEntity<String> postProjectDicomweb(
+		final @ApiParam(value = "Project ID") @PathVariable("projectId") @Project String projectId,
+		final @ApiParam(value = "Overwrite existing data")
+		@RequestParam(value = "overwrite", required = false, defaultValue = "false") boolean overwrite)
+		throws PluginException
+	{
+		UserI user = getSessionUser();
+		Security.checkProject(user, projectId);
+
+		// Prevent starting the generation process if another one is already running
+		if (!genAllDwDataLock.tryLock())
+		{
+			return new ResponseEntity<>(HttpStatus.LOCKED);
+		}
+		HttpStatus status;
+		try
+		{
+			log.info("Project "+projectId+" DICOMweb data creation requested");
+			status = generateProjectDwData(user, projectId, overwrite);
+			log.info("Project "+projectId+" DICOMweb data creation complete");
+		}
+		finally
+		{
+			genAllDwDataLock.unlock();
+		}
+		return new ResponseEntity<>(status);
+	}
+
+	@ApiOperation(value = "Generates DICOMweb data for every session in the subject.")
+	@ApiResponses(
+		{
+			@ApiResponse(code = 201, message = "The DICOMweb data has been created for every session in the subject."),
+			@ApiResponse(code = 403, message = "The user does not have permission to perform this action."),
+			@ApiResponse(code = 423, message = "This process is already underway and is locked."),
+			@ApiResponse(code = 500, message = "An unexpected error occurred."),
+			@ApiResponse(code = 501, message = "SOP Class or modality not supported."),
+		})
+	@XapiRequestMapping(
+		value = "projects/{projectId}/subjects/{subjectId}",
+		method = RequestMethod.POST,
+		restrictTo = AccessLevel.Edit
+	)
+	public ResponseEntity<String> postSubjectDicomweb(
+		final @ApiParam(value = "Project ID") @PathVariable("projectId") @Project String projectId,
+		final @ApiParam(value = "Subject ID") @PathVariable("subjectId") @Subject String subjectId,
+		final @ApiParam(value = "Overwrite existing data")
+		@RequestParam(value = "overwrite", required = false, defaultValue = "false") boolean overwrite)
+		throws PluginException
+	{
+		UserI user = getSessionUser();
+		Security.checkProject(user, projectId);
+
+		// Prevent starting the generation process if another one is already running
+		if (!genAllDwDataLock.tryLock())
+		{
+			return new ResponseEntity<>(HttpStatus.LOCKED);
+		}
+		HttpStatus status;
+		try
+		{
+			log.info("Subject "+subjectId+" DICOMweb data creation requested");
+			status = generateSubjectDwData(user, projectId, subjectId, overwrite);
+			log.info("Subject "+subjectId+" DICOMweb data creation complete");
+		}
+		finally
+		{
+			genAllDwDataLock.unlock();
+		}
+		return new ResponseEntity<>(status);
 	}
 
 	/*
@@ -476,20 +653,6 @@ public class OhifDicomwebApi extends AbstractXapiRestController
 	############################################################
 	*/
 
-	private Map<String,String> validateAndCheckPermissions(String projectId,
-		String experimentId) throws PluginException
-	{
-		UserI user = getSessionUser();
-
-		XnatImagesessiondata sessionData = checkPermissions(user, projectId,
-			experimentId, Security.Read);
-
-		boolean isSharedProject = !sessionData.getProject().equals(projectId);
-
-		return DicomwebUtils.getXnatIds(sessionData,
-			isSharedProject ? projectId : null);
-	}
-
 	private XnatImagesessiondata checkPermissions(UserI user, String projectId,
 		String experimentId, String... permissions) throws PluginException
 	{
@@ -502,14 +665,117 @@ public class OhifDicomwebApi extends AbstractXapiRestController
 
 		if (!PluginUtils.isSharedIntoProject(sessionData, projectId))
 		{
-			log.info(
-				"Experiment " + experimentId + " is not part of Project " + projectId);
 			throw new PluginException(
 				"Experiment " + experimentId + " is not part of Project " + projectId,
 				PluginCode.HttpNotFound);
 		}
 
 		return sessionData;
+	}
+
+	private HttpStatus generateAllDwData(boolean overwriteExisting)
+		throws PluginException
+	{
+		UserI user = getSessionUser();
+		List<XnatExperimentdata> experiments =
+			XnatExperimentdata.getAllXnatExperimentdatas(user, true);
+		List<String> exptIds = getImageSessionIds(experiments);
+		return generateDwData(user, exptIds, overwriteExisting);
+	}
+
+	private HttpStatus generateDwData(UserI user, List<String> exptIds,
+		boolean overwriteExisting) throws PluginException
+	{
+		// Use multithreading, if available
+		int numThreads = Runtime.getRuntime().availableProcessors();
+		numThreads = Math.min(numThreads, 4);
+		log.info("Thread count for parallel DICOMweb data creation: " + numThreads);
+		ExecutorService service = Executors.newFixedThreadPool(numThreads);
+
+		List<Callable<Void>> tasks = new ArrayList<>();
+		for (String id : exptIds)
+		{
+			log.info("ImageSession ID: "+id);
+			tasks.add((Callable<Void>) () ->
+			{
+				dwInputHandler.createDicomwebData(id, user, overwriteExisting);
+				return null;
+			});
+		}
+		try
+		{
+			service.invokeAll(tasks);
+		}
+		catch (InterruptedException ex)
+		{
+			throw new PluginException(
+				"DICOMweb data creation interrupted: "+ex.getMessage(),
+				PluginCode.HttpInternalError, ex);
+		}
+		finally
+		{
+			service.shutdown();
+		}
+		return HttpStatus.CREATED;
+	}
+
+	private HttpStatus generateProjectDwData(UserI user, String projectId,
+		boolean overwriteExisting) throws PluginException
+	{
+		XnatProjectdata projectData = XnatProjectdata.getProjectByIDorAlias(
+			projectId, user, false);
+		List<String> exptIds = getImageSessionIds(projectData.getExperiments());
+		return generateDwData(user, exptIds, overwriteExisting);
+	}
+
+	private HttpStatus generateSubjectDwData(UserI user, String projectId,
+		String subjectId, boolean overwriteExisting) throws PluginException
+	{
+		XnatSubjectdata subjectData = XnatSubjectdata.getXnatSubjectdatasById(
+			subjectId, user, true);
+		if (!subjectData.getProject().equals(projectId))
+		{
+			throw new PluginException(
+				"Subject "+subjectId+" not found in project "+projectId,
+				PluginCode.HttpUnprocessableEntity);
+		}
+		List<String> exptIds = new ArrayList<>();
+		for (XnatSubjectassessordataI assessorData :
+			subjectData.getExperiments_experiment())
+		{
+			if (assessorData instanceof XnatImagesessiondata)
+			{
+				exptIds.add(assessorData.getId());
+			}
+		}
+		return generateDwData(user, exptIds, overwriteExisting);
+	}
+
+	private List<String> getImageSessionIds(List<XnatExperimentdata> experiments)
+	{
+		List<String> exptIds = new ArrayList<>();
+		for (XnatExperimentdata experimentData : experiments)
+		{
+			if (experimentData instanceof XnatImagesessiondata)
+			{
+				exptIds.add(experimentData.getId());
+			}
+		}
+		return exptIds;
+	}
+
+	private Map<String,String> validateAndCheckPermissions(String projectId,
+		String experimentId) throws PluginException
+	{
+		UserI user = getSessionUser();
+
+		XnatImagesessiondata sessionData = checkPermissions(user, projectId,
+			experimentId, Security.Read);
+
+		boolean isSharedProject = !sessionData.getProject().equals(projectId);
+
+		return DicomwebUtils.getXnatIds(sessionData,
+			isSharedProject ? projectId : null);
 	}
 
 	public static final class AttributePath {

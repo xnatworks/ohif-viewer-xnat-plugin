@@ -180,12 +180,11 @@ dependencies {
     implementation("com.google.code.gson:gson") { transitive = false }
 
     // ICR DICOMweb
-    implementAndInclude("org.dcm4che:dcm4che-core:5.30.0")
-    implementAndInclude("org.dcm4che:dcm4che-json:5.30.0")
-    implementAndInclude("org.dcm4che:dcm4che-image:5.30.0")
-    implementAndInclude("org.dcm4che:dcm4che-imageio:5.30.0")
-//    implementAndInclude("org.dcm4che:dcm4che-imageio-opencv:5.30.0")
-//    implementAndInclude("org.dcm4che:dcm4che-imageio-rle:5.30.0")
+    def vDcm4che = '5.30.0'
+    implementAndInclude("org.dcm4che:dcm4che-core:${vDcm4che}")
+    implementAndInclude("org.dcm4che:dcm4che-json:${vDcm4che}")
+    implementAndInclude("org.dcm4che:dcm4che-image:${vDcm4che}")
+    implementAndInclude("org.dcm4che:dcm4che-imageio:${vDcm4che}")
 
     // Guava
     implementation("com.google.guava:guava") { transitive = false }
