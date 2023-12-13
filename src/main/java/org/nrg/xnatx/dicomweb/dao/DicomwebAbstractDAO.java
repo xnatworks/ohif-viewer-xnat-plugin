@@ -65,6 +65,14 @@ public abstract class DicomwebAbstractDAO<E extends BaseHibernateEntity> extends
 		return projectionList;
 	}
 
+	public long countByProperty(String propertyName, Object propertyValue)
+	{
+		final Criteria criteria = getCriteriaForType();
+		criteria.setProjection(Projections.rowCount());
+		criteria.add(Restrictions.eq(propertyName, propertyValue));
+		return (long) criteria.uniqueResult();
+	}
+
 	public List<E> getAll(final E example, final String[] excludeProperty,
 		final ProjectionList projectionList, boolean isEager,
 		List<Criterion> extraCriteria)

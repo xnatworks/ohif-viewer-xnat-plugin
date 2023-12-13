@@ -58,6 +58,13 @@ public class DwStudyDataServiceImpl
 {
 	@Override
 	@Transactional
+	public long countByProperty(String propertyName, Object propertyValue)
+	{
+		return getDao().countByProperty(propertyName, propertyValue);
+	}
+
+	@Override
+	@Transactional
 	public DwStudy createOrUpdate(DwStudy study) throws IOException
 	{
 		DwStudy existing = this.get("sessionId",

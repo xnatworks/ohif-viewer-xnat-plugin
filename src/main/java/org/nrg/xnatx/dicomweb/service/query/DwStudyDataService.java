@@ -46,6 +46,8 @@ import java.util.List;
  */
 public interface DwStudyDataService extends BaseHibernateService<DwStudy>
 {
+	long countByProperty(String propertyName, Object propertyValue);
+
 	DwStudy createOrUpdate(DwStudy study) throws IOException;
 
 	DwStudy get(DwStudy example, boolean isEager);

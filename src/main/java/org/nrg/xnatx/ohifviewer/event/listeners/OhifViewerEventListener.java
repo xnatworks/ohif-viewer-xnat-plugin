@@ -47,6 +47,8 @@ import org.nrg.xft.exception.XFTInitException;
 import org.nrg.xft.security.UserI;
 import org.nrg.xnat.helpers.merge.AnonUtils;
 import org.nrg.xnat.turbine.utils.ArchivableItem;
+import org.nrg.xnatx.dicomweb.service.inputcreator.DicomwebInputHandler;
+import org.nrg.xnatx.dicomweb.toolkit.DicomwebUtils;
 import org.nrg.xnatx.ohifviewer.inputcreator.JsonMetadataHandler;
 import org.nrg.xnatx.plugin.PluginException;
 import org.slf4j.Logger;
@@ -74,18 +76,21 @@ public class OhifViewerEventListener
 		OhifViewerEventListener.class);
 
 	private final AnonUtils anonUtils;
+	private final DicomwebInputHandler dwInputHandler;
 	private final JsonMetadataHandler jsonHandler;
 	private final Map<String, Boolean> triggerPipelines = new HashMap<>();
 	private final Map<String, Boolean> triggerPipelinesSubject = new HashMap<>();
 
 	@Inject
-	public OhifViewerEventListener(EventBus eventBus, AnonUtils anonUtils, JsonMetadataHandler jsonHandler)
+	public OhifViewerEventListener(EventBus eventBus, AnonUtils anonUtils,
+		DicomwebInputHandler dwInputHandler, JsonMetadataHandler jsonHandler)
 	{
 		eventBus.on(
 			R(WorkflowStatusEvent.class.getName()+
 				"[.]?("+PersistentWorkflowUtils.COMPLETE+")"),
 			this);
 		this.anonUtils = anonUtils;
+		this.dwInputHandler = dwInputHandler;
 		this.jsonHandler = jsonHandler;
 		createTriggers();
 		logger.info("OHIF Viewer event listener initialised");
@@ -144,6 +149,17 @@ public class OhifViewerEventListener
 			return;
 		}
 
+		// Session Deleted event
+		if (se.instanceOf(XnatImagesessiondata.SCHEMA_ELEMENT_NAME) &&
+				pipelineName.equals("Deleted"))
+		{
+			XnatImagesessiondata sessionData =
+				XnatImagesessiondata.getXnatImagesessiondatasById(
+					id, user, false);
+			removeDicomwebData(sessionData, id);
+			return;
+		}
+
 		if (XnatSubjectdata.SCHEMA_ELEMENT_NAME.equals(dataType) &&
 				triggerPipelinesSubject.containsKey(pipelineName))
 		{
@@ -197,7 +213,6 @@ public class OhifViewerEventListener
 		}
 		else if (item instanceof XnatImagesessiondata)
 		{
-
 			logger.debug("Rebuilding viewer JSON metadata for ID: {} User: {} Trigger event: {}",
 					id, user.getUsername(), pipelineName);
 			generateJson((XnatImagesessiondata) item, user);
@@ -208,10 +223,31 @@ public class OhifViewerEventListener
 		try
 		{
 			jsonHandler.createAndStoreJsonConfig(item, user, true);
+			if (DicomwebUtils.isSessionValidForDicomweb(item))
+			{
+				dwInputHandler.createDicomwebData(item, true);
+			}
 		}
 		catch (PluginException ex)
 		{
 			logger.warn(ex.getMessage(), ex);
+		}
+	}
+
+	private void removeDicomwebData(XnatImagesessiondata sessionData, String id)
+	{
+		try
+		{
+			// Session Data should be available if the session was deleted from
+			// a shared project. If null, then it was deleted from the parent project.
+			if (sessionData == null)
+			{
+				dwInputHandler.deleteDicomwebData(id);;
+			}
+		}
+		catch (PluginException ex)
+		{
+			// logger.warn(ex.getMessage(), ex);
 		}
 	}
 

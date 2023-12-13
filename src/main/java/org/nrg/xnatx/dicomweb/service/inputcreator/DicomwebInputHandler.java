@@ -128,6 +128,25 @@ public class DicomwebInputHandler
 		}
 	}
 
+	public void deleteDicomwebData(String sessionId)
+		throws PluginException
+	{
+		if (sessionId == null)
+		{
+			throw new PluginException("Session ID must not be null",
+				PluginCode.HttpUnprocessableEntity);
+		}
+
+		DwStudy study = dwDataService.getStudyBySessionId(sessionId, false);
+		if (study == null)
+		{
+			throw new PluginException("Session "+sessionId+" has no DICOMweb data",
+				PluginCode.HttpNotFound);
+		}
+
+		dwDataService.deleteStudy(study);
+	}
+
 	public void deleteDicomwebData(XnatImagesessiondata sessionData)
 		throws PluginException
 	{
@@ -137,16 +156,7 @@ public class DicomwebInputHandler
 				PluginCode.HttpUnprocessableEntity);
 		}
 
-		String sessionId = sessionData.getId();
-
-		DwStudy study = dwDataService.getStudyBySessionId(sessionId, false);
-		if (study == null)
-		{
-			throw new PluginException("SessionData must not be null",
-				PluginCode.HttpNotFound);
-		}
-
-		dwDataService.deleteStudy(study);
+		deleteDicomwebData(sessionData.getId());
 	}
 
 	public boolean hasValidDicomwebData(XnatImagesessiondata sessionData)

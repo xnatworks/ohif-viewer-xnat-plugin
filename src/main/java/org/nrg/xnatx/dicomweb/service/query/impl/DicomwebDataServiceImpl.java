@@ -104,7 +104,7 @@ public class DicomwebDataServiceImpl implements DicomwebDataService
 				deleteSeries(existingSeries);
 			}
 		}
-		else if (isExistingPatient)
+		else if (isExistingPatient) // !isExistingStudy && isExistingPatient
 		{
 			// Update patient's query attributes
 			patient.incrementNumberOfStudies();
@@ -156,7 +156,25 @@ public class DicomwebDataServiceImpl implements DicomwebDataService
 		{
 			deleteSeries(entity);
 		}
+
+		// Get Patient's number of studies
+		DwPatient patient = study.getPatient();
+		long numStudies = studyDataService.countByProperty(
+			"patient", patient);
+
 		studyDataService.delete(study);
+
+		if (numStudies <= 1)
+		{
+			// Remove the Patient record as it has no associated studies
+			patientDataService.delete(patient);
+		}
+		else
+		{
+			// Update patient's query attributes
+			patient.decrementNumberOfStudies();
+			patientDataService.update(patient);
+		}
 	}
 
 	@Override
