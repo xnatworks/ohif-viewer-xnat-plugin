@@ -1,3 +1,10 @@
+**3.7.0-BETA-1**
+
+- Added DICOMweb data handlers to the XNAT session events. DICOMweb data is automatically created for new sessions and also removed upon deleting a session.
+- DICOMweb data generation at subject, project, and all site levels.
+- Refactored the XNAT UI scripts with the JavaScript Promise API and included support for the DICOMweb-based sessions.
+- Provide detailed error messages from the microscopy viewer.
+
 **3.7.0-ALPHA-1**
 
 - Implemented a customised support for the DICOMweb QIDO and WADO services.
