@@ -305,7 +305,7 @@ public class PluginUtils
 	public static Set<String> getSopInstanceUids(UserI user, String sessionId,
 		String scanId) throws PluginException
 	{
-		Set<String> set = new LinkedHashSet<>();
+		Set<String> uids = new LinkedHashSet<>();
 		XnatImagesessiondata sessionData = PluginUtils.getImageSessionData(
 			sessionId, user);
 		XnatImagescandata scanData = sessionData.getScanById(scanId);
@@ -315,40 +315,13 @@ public class PluginUtils
 				"Bad scan ID or not visible to user "+user.getUsername()+": "+scanId,
 				PluginCode.HttpUnprocessableEntity);
 		}
-		Document doc;
-		try
+		List<String> catPaths = getScanCatalogs(sessionData, scanData);
+		for (String catPath : catPaths)
 		{
-			String path = getScanCatalog(sessionData, scanData);
-			logger.debug("Catalog for UIDs: "+path);
-			doc = streamToDoc(new FileInputStream(path));
+			addSopInstanceUids(catPath, uids);
 		}
-		catch (IOException ex)
-		{
-			throw new PluginException("DICOM catalog error",
-				PluginCode.HttpUnprocessableEntity, ex);
-		}
-		Node node = Xml.getFirstMatch(doc.getDocumentElement(), "cat:entries");
-		NodeList children = node.getChildNodes();
-		for (int i=0; i<children.getLength(); i++)
-		{
-			Node child = children.item(i);
-			if (!child.getNodeName().equals("cat:entry"))
-			{
-				continue;
-			}
-			NamedNodeMap attrs = child.getAttributes();
-			Node uidNode = attrs.getNamedItem("UID");
-			if (uidNode != null)
-			{
-				String uid = uidNode.getTextContent();
-				if (!StringUtils.isNullOrEmpty(uid))
-				{
-					set.add(uid);
-				}
-			}
-		}
-		logger.debug("UIDs found: "+set.size());
-		return set;
+		logger.debug("UIDs found: "+uids.size());
+		return uids;
 	}
 
 	/**
@@ -360,22 +333,36 @@ public class PluginUtils
 	public static String getScanCatalog(XnatImagesessiondata sessionData,
 		XnatImagescandata scanData)
 	{
-		String path = null;
+		String dcmPath = null;
+		String secPath = null;
 		for (XnatAbstractresourceI res : scanData.getFile()) {
-			if (res instanceof XnatResourcecatalog &&
-				 (res.getLabel().equals("DICOM") || res.getLabel().equals("secondary")))
+			if (res instanceof XnatResourcecatalog)
 			{
-				path = ((XnatResourcecatalog) res).getUri();
-				break;
+				switch (res.getLabel())
+				{
+					case "DICOM":
+						dcmPath = ((XnatResourcecatalog) res).getUri();
+						break;
+					case "secondary":
+						secPath = ((XnatResourcecatalog) res).getUri();
+						break;
+					default:
+				}
 			}
 		}
-		if (path == null) {
-			// Default
-			String scanId = scanData.getId();
-			path = PluginUtils.getExperimentPath(sessionData)+
-					"SCANS"+File.separator+scanId+File.separator+"DICOM"+File.separator+
-					"scan_"+scanId+"_catalog.xml";
+		if (dcmPath != null)
+		{
+			return dcmPath;
 		}
+		if (secPath != null)
+		{
+			return secPath;
+		}
+		String scanId = scanData.getId();
+		String path = PluginUtils.getExperimentPath(sessionData)+
+				"SCANS"+File.separator+scanId+File.separator+"DICOM"+File.separator+
+				"scan_"+scanId+"_catalog.xml";
+		logger.warn("No DICOM or secondary catalogs found in XnatImagescandata. Using fallback path: "+path);
 		return path;
 	}
 
@@ -485,6 +472,41 @@ public class PluginUtils
 			throw new PluginException(PluginCode.IO, ex);
 		}
 		return doc;
+	}
+
+	private static void addSopInstanceUids(String path, Set<String> uids) throws PluginException
+	{
+		Document doc;
+		try
+		{
+			logger.debug("Catalog for UIDs: "+path);
+			doc = streamToDoc(new FileInputStream(path));
+		}
+		catch (IOException ex)
+		{
+			throw new PluginException("DICOM catalog error",
+				PluginCode.HttpUnprocessableEntity, ex);
+		}
+		Node node = Xml.getFirstMatch(doc.getDocumentElement(), "cat:entries");
+		NodeList children = node.getChildNodes();
+		for (int i=0; i<children.getLength(); i++)
+		{
+			Node child = children.item(i);
+			if (!child.getNodeName().equals("cat:entry"))
+			{
+				continue;
+			}
+			NamedNodeMap attrs = child.getAttributes();
+			Node uidNode = attrs.getNamedItem("UID");
+			if (uidNode != null)
+			{
+				String uid = uidNode.getTextContent();
+				if (!StringUtils.isNullOrEmpty(uid))
+				{
+					uids.add(uid);
+				}
+			}
+		}		
 	}
 
 	private PluginUtils()
