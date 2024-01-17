@@ -10,6 +10,14 @@
 - Implemented a customised support for the DICOMweb QIDO and WADO services.
 - Integrated dicom-microscopy-viewer v0.45.1.
 
+**3.6.1**
+
+- Automated the detection of 4-D stack dimensions when creating multi-stack displays.
+- Enabled the grouping of DICOM Enhanced images belonging to the same scan into a single Cluster.
+- Display the number of study scans in the Scans panel.
+- Simplified the data validation for enabling the 3D MPR mode.
+- Fixed invalid VOI Attributes provided by the cornerstone-wado-image-loader.
+
 **3.6.0**
 
 - Minor improvements and bug fixes.
