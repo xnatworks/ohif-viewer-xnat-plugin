@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        vXnat = '1.8.7'
+        vXnat = '1.8.10'
         pluginAppName = "ICR/XNAT OHIF Viewer Plugin"
     }
     repositories {
@@ -180,11 +180,13 @@ dependencies {
     implementation("com.google.code.gson:gson") { transitive = false }
 
     // ICR DICOMweb
-    def vDcm4che = '5.30.0'
-    implementAndInclude("org.dcm4che:dcm4che-core:${vDcm4che}")
-    implementAndInclude("org.dcm4che:dcm4che-json:${vDcm4che}")
-    implementAndInclude("org.dcm4che:dcm4che-image:${vDcm4che}")
-    implementAndInclude("org.dcm4che:dcm4che-imageio:${vDcm4che}")
+    // vDcm4che matching dcm4che5.version
+    // in https://bitbucket.org/xnatdev/parent/src/master/pom.xml
+    def vDcm4che = '5.31.0'
+    implementation("org.dcm4che:dcm4che-core:${vDcm4che}") { transitive = false }
+    implementation("org.dcm4che:dcm4che-image:${vDcm4che}") { transitive = false }
+    implementation("org.dcm4che:dcm4che-imageio:${vDcm4che}") { transitive = false }
+    implementation("org.dcm4che:dcm4che-json:${vDcm4che}") { transitive = false }
 
     // Guava
     implementation("com.google.guava:guava") { transitive = false }
