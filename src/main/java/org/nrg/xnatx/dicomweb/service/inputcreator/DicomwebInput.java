@@ -44,6 +44,7 @@ import org.nrg.xnatx.dicomweb.entity.DwSeries;
 import org.nrg.xnatx.dicomweb.entity.DwStudy;
 import org.nrg.xnatx.dicomweb.toolkit.DicomwebConstants;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
@@ -67,6 +68,8 @@ public class DicomwebInput
 	private Set<String> sopInstanceUids = new HashSet<>();
 	private DwStudy study;
 	private Map<String,Set<String>> tsuidsInSeriesMap = new LinkedHashMap<>();
+
+	private static final String SEP = File.separator;
 
 	public DicomwebInput(Map<String,String> xnatIds, final String experimentPath)
 	{
@@ -222,8 +225,8 @@ public class DicomwebInput
 
 		// Ex. ".../SCANS/1/DICOM/..."
 		String pathStr = instPath.toString();
-		String scanId = pathStr.substring(pathStr.indexOf("/SCANS/") + 7);
-		scanId = scanId.substring(0, scanId.indexOf('/'));
+		String scanId = pathStr.substring(pathStr.indexOf(SEP+"SCANS"+SEP) + 7);
+		scanId = scanId.substring(0, scanId.indexOf(SEP));
 		series.setScanId(scanId);
 
 		seriesList.add(series);

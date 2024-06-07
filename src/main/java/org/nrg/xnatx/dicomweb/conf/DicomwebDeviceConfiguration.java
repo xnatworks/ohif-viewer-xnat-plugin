@@ -56,6 +56,7 @@ public class DicomwebDeviceConfiguration
 	public static final String DEFAULT_WADO_ZIP_ENTRY_NAME_FORMAT =
 		"DICOM/{0020000D,hash}/{0020000E,hash}/{00080018,hash}.dcm";
 	public static final String SPOOL_ROOT_DIRECTORY = "${java.io.tmpdir}";
+	public static final boolean ENCAPSULATED_PIXEL_DATA_USES_OFFSET = true;
 
 	private static final EnumMap<Entity,AttributeFilter> attributeFilters = new EnumMap<>(
 		Entity.class);

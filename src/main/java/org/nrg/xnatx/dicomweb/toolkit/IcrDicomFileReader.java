@@ -250,7 +250,8 @@ public class IcrDicomFileReader
 			{
 				BulkData bulkData = (BulkData) fragment;
 				dataOffset[i] = bulkData.offset();
-				dataLength[i++] = bulkData.longLength();
+				dataLength[i] = bulkData.longLength();
+				i++;
 			}
 		}
 		else

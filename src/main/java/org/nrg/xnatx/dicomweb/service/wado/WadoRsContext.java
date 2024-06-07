@@ -113,6 +113,12 @@ public class WadoRsContext
 	public static MediaType selectMediaType(List<MediaType> accepted,
 		MediaType... provided)
 	{
+		// We are returning the image buffer as is,
+		// so there is no decoding or encoding being processed.
+		if (provided.length > 0) {
+			return provided[0];
+		}
+
 		for (MediaType acceptedMediaType : accepted)
 		{
 			for (MediaType mediaType : provided)
