@@ -1,3 +1,12 @@
+**3.7.0-RC-1**
+
+- Partial support for images with multiple focal planes.
+    - If provided, the extended-depth-of-field (focus stacking) images are displayed.
+    - Otherwise, the viewer will try to display the first focal plane.
+- Slide information panel providing the following features:
+    - View the slide label image (when available).
+    - Switching the visibility between provided channels (optical paths).
+
 **3.7.0-BETA-1**
 
 - Added DICOMweb data handlers to the XNAT session events. DICOMweb data is automatically created for new sessions and also removed upon deleting a session.
