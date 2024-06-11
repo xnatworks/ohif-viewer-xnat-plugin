@@ -35,10 +35,17 @@
 package org.nrg.xnatx.dicomweb.toolkit;
 
 import lombok.extern.slf4j.Slf4j;
+import org.nrg.xdat.XDAT;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 /**
  * @author m.alsad
@@ -55,5 +62,31 @@ public class HttpUtils
 		headers.setContentType(MediaType.TEXT_PLAIN);
 		String body = "Error: " + errorMessage;
 		return new ResponseEntity<>(body, headers, status);
+	}
+
+	public static StringBuffer fixUrlScheme(String requestUrl)
+	{
+		String siteUrl = XDAT.getSiteUrl();
+		String siteScheme = null;
+		try
+		{
+			URI uri = new URI(siteUrl);
+			siteScheme = uri.getScheme();
+		}
+		catch (URISyntaxException e)
+		{
+			// Ignore
+		}
+
+		if (siteScheme == null)
+		{
+			return new StringBuffer(requestUrl);
+		}
+
+		UriComponentsBuilder builder =
+			UriComponentsBuilder.fromHttpUrl(requestUrl);
+		String modifiedSiteUrl = builder.scheme(siteScheme).toUriString();
+
+		return new StringBuffer(modifiedSiteUrl);
 	}
 }

@@ -209,7 +209,7 @@ public class WadoOutputWriters
 		}
 		catch (Exception e)
 		{
-			throw new IOException("Error in processing metadata");
+			throw new IOException("Error in processing metadata", e);
 		}
 	}
 

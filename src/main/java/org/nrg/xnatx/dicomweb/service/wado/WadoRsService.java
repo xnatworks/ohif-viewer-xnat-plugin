@@ -77,7 +77,8 @@ public class WadoRsService
 		String studyUid, String seriesUid, String instanceUid,
 		int[] frameList, int[] attributePath)
 	{
-		StringBuffer requestUrl = request.getRequestURL();
+		StringBuffer requestUrl = HttpUtils.fixUrlScheme(
+			request.getRequestURL().toString());
 
 		final WadoRsContext ctx = new WadoRsContext(target, xnatIds, studyUid,
 			seriesUid, instanceUid, frameList, attributePath);
