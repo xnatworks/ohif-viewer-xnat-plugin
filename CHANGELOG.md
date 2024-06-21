@@ -1,3 +1,8 @@
+**3.7.0-RC-2**
+
+- Upload snapshot images to XNAT session resources.
+- Fixed the image position synchroniser for scans with different slice thickness.
+
 **3.7.0-RC-1**
 
 - Partial support for images with multiple focal planes.

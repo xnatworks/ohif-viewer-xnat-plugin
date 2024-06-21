@@ -27,7 +27,7 @@ buildscript {
 }
 
 group 'org.nrg.xnatx.plugins'
-version '3.7.0-RC.1'
+version '3.7.0-RC.2'
 
 apply plugin: 'io.spring.dependency-management'
 apply plugin: 'java'
@@ -183,10 +183,12 @@ dependencies {
     // vDcm4che matching dcm4che5.version
     // in https://bitbucket.org/xnatdev/parent/src/master/pom.xml
     def vDcm4che = '5.31.0'
-    implementAndInclude("org.dcm4che:dcm4che-core:${vDcm4che}")
-    implementAndInclude("org.dcm4che:dcm4che-image:${vDcm4che}")
-    implementAndInclude("org.dcm4che:dcm4che-imageio:${vDcm4che}")
-    implementAndInclude("org.dcm4che:dcm4che-json:${vDcm4che}")
+    implementation("org.dcm4che:dcm4che-core:${vDcm4che}") { transitive = false }
+    implementation("org.dcm4che:dcm4che-image:${vDcm4che}") { transitive = false }
+    implementation("org.dcm4che:dcm4che-imageio:${vDcm4che}") { transitive = false }
+    implementAndInclude("org.dcm4che:dcm4che-json:${vDcm4che}") { transitive = false }
+    implementAndInclude("org.glassfish:jakarta.json:1.1.6")
+//    implementAndInclude("jakarta.json:jakarta.json-api:1.1.6")
 
     // Guava
     implementation("com.google.guava:guava") { transitive = false }
