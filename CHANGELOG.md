@@ -1,3 +1,7 @@
+**3.6.3**
+
+- Fixed image position sync for scans with different slice thickness.
+
 **3.6.2**
 
 - Search both DICOM and secondary catalogs for SOP instance UIDs for ROI collection dependency checks.
