@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        vXnat = '1.8.10'
+        vXnat = '1.8.11-SNAPSHOT'
         pluginAppName = "ICR/XNAT OHIF Viewer Plugin"
     }
     repositories {
@@ -189,6 +189,7 @@ dependencies {
     implementAndInclude("org.dcm4che:dcm4che-json:${vDcm4che}") { transitive = false }
     implementAndInclude("org.glassfish:jakarta.json:1.1.6")
 //    implementAndInclude("jakarta.json:jakarta.json-api:1.1.6")
+    implementAndInclude("javax.inject:javax.inject:1")
 
     // Guava
     implementation("com.google.guava:guava") { transitive = false }
