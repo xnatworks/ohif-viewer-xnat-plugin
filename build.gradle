@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        vXnat = '1.8.7'
+        vXnat = '1.8.11-SNAPSHOT'
         pluginAppName = "ICR/XNAT OHIF Viewer Plugin"
     }
     repositories {
@@ -160,7 +160,8 @@ dependencies {
     implementation("turbine:turbine") { transitive = false }
     implementation("org.apache.velocity:velocity") { transitive = false }
 //    implementation ('stratum:stratum') { transitive = false }
-
+    
+    implementAndInclude("javax.inject:javax.inject:1")
     implementation "org.springframework:spring-web"
     implementation "org.springframework:spring-webmvc"
     implementation "org.springframework:spring-context"
