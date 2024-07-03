@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-export NODE_OPTIONS=--openssl-legacy-provider
+#export NODE_OPTIONS=--openssl-legacy-provider
 PLUGIN_ROOT="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 VIEWER_ROOT=${PLUGIN_ROOT}/ohifviewerxnat
 VIEWER_DIST=${VIEWER_ROOT}/platform/viewer/dist
