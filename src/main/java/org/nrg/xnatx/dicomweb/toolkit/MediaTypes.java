@@ -300,7 +300,7 @@ public class MediaTypes
 	 * "multipart/related;type=\"application/dicom\""
 	 */
 	public final static String MULTIPART_RELATED_APPLICATION_OCTET_STREAM_VALUE =
-		"multipart/related;type=\"octet-stream\"";
+		"multipart/related;type=\"application/octet-stream\"";
 
 	/**
 	 * "model/stl"
