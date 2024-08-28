@@ -1,3 +1,9 @@
+**3.7.0-RC-3**
+
+- Fixed typo (missing application) in the octet-stream media type.
+- Fixed the freehand3DTool becoming unresponsive when deleting a contour while drawing.
+- Fixed dependencies related to Node.js modules with Webpack 4.
+  
 **3.7.0-RC-2**
 
 - Upload snapshot images to XNAT session resources.
