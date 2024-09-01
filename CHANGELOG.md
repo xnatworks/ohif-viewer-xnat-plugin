@@ -1,3 +1,8 @@
+**3.7.0**
+
+- Supporting DICOM Microscopy images as per the prerelease notes listed below.
+- Multiple bug fixes and improvements.
+
 **3.7.0-RC-3**
 
 - Fixed typo (missing application) in the octet-stream media type.
@@ -7,7 +12,6 @@
 **3.7.0-RC-2**
 
 - Upload snapshot images to XNAT session resources.
-- Fixed the image position synchroniser for scans with different slice thickness.
 
 **3.7.0-RC-1**
 
@@ -29,6 +33,10 @@
 
 - Implemented a customised support for the DICOMweb QIDO and WADO services.
 - Integrated dicom-microscopy-viewer v0.45.1.
+
+**3.6.3**
+
+- Fixed the image position synchroniser for scans with different slice thickness.
 
 **3.6.2**
 
