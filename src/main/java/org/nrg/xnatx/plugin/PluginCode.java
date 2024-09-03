@@ -67,12 +67,17 @@ public final class PluginCode extends AbstractExceptionCode
 		"HTTP 404 not found", "03404");
 	public static final PluginCode HttpMethodNotAllowed = new PluginCode(
 		"HTTP 405 method not allowed", "03405");
+	public static final PluginCode HttpMethodNotAcceptable = new PluginCode(
+		"HTTP 406 method not Acceptable", "03406");
 	public static final PluginCode HttpConflict = new PluginCode(
 		"HTTP 409 conflict", "03409");
 	public static final PluginCode HttpUnprocessableEntity = new PluginCode(
 		"HTTP 422 unprocessable entity", "03422");
 	public static final PluginCode HttpInternalError = new PluginCode(
 		"HTTP 500 internal error", "03500");
+	// In the DICOM context, this code shall be used for cases such as SOP Class Not Supported
+	public static final PluginCode DICOMWebNotSupported = new PluginCode(
+		"501 Not Implemented", "03501");
 	// 04 General
 	public static final PluginCode IllegalArgument = new PluginCode(
 		"Illegal argument", "04001");

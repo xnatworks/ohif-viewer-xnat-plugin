@@ -1,6 +1,42 @@
+**3.7.0**
+
+- Supporting DICOM Microscopy images as per the prerelease notes listed below.
+- Multiple bug fixes and improvements.
+
+**3.7.0-RC-3**
+
+- Fixed typo (missing application) in the octet-stream media type.
+- Fixed the freehand3DTool becoming unresponsive when deleting a contour while drawing.
+- Fixed dependencies related to Node.js modules with Webpack 4.
+  
+**3.7.0-RC-2**
+
+- Upload snapshot images to XNAT session resources.
+
+**3.7.0-RC-1**
+
+- Partial support for images with multiple focal planes.
+    - If provided, the extended-depth-of-field (focus stacking) images are displayed.
+    - Otherwise, the viewer will try to display the first focal plane.
+- Slide information panel providing the following features:
+    - View the slide label image (when available).
+    - Switching the visibility between provided channels (optical paths).
+
+**3.7.0-BETA-1**
+
+- Added DICOMweb data handlers to the XNAT session events. DICOMweb data is automatically created for new sessions and also removed upon deleting a session.
+- DICOMweb data generation at subject, project, and all site levels.
+- Refactored the XNAT UI scripts with the JavaScript Promise API and included support for the DICOMweb-based sessions.
+- Provide detailed error messages from the microscopy viewer.
+
+**3.7.0-ALPHA-1**
+
+- Implemented a customised support for the DICOMweb QIDO and WADO services.
+- Integrated dicom-microscopy-viewer v0.45.1.
+
 **3.6.3**
 
-- Fixed image position sync for scans with different slice thickness.
+- Fixed the image position synchroniser for scans with different slice thickness.
 
 **3.6.2**
 
@@ -27,7 +63,7 @@
 
 **3.6.0-RC-2**
 
-- Support organising and displaying of 4-D datasets as multi-stack. 
+- Support organising and displaying of 4-D datasets as multi-stack.
 
 **3.6.0-RC-1**
 

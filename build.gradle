@@ -1,6 +1,6 @@
 buildscript {
     ext {
-        vXnat = '1.8.7'
+        vXnat = '1.8.10'
         pluginAppName = "ICR/XNAT OHIF Viewer Plugin"
     }
     repositories {
@@ -27,7 +27,7 @@ buildscript {
 }
 
 group 'org.nrg.xnatx.plugins'
-version '3.6.3'
+version '3.7.0'
 
 apply plugin: 'io.spring.dependency-management'
 apply plugin: 'java'
@@ -111,7 +111,7 @@ repositories {
     mavenCentral()
     jcenter()
     maven {
-        url 'http://dcm4che.org/maven2'
+        url 'https://www.dcm4che.org/maven2'
         name 'dcm4che Maven Repository'
     }
     maven {
@@ -178,6 +178,17 @@ dependencies {
     implementation("log4j:log4j") { transitive = false }
     implementation("dcm4che:dcm4che-core") { transitive = false }
     implementation("com.google.code.gson:gson") { transitive = false }
+
+    // ICR DICOMweb
+    // vDcm4che matching dcm4che5.version
+    // in https://bitbucket.org/xnatdev/parent/src/master/pom.xml
+    def vDcm4che = '5.31.0'
+    implementation("org.dcm4che:dcm4che-core:${vDcm4che}") { transitive = false }
+    implementation("org.dcm4che:dcm4che-image:${vDcm4che}") { transitive = false }
+    implementation("org.dcm4che:dcm4che-imageio:${vDcm4che}") { transitive = false }
+    implementAndInclude("org.dcm4che:dcm4che-json:${vDcm4che}") { transitive = false }
+    implementAndInclude("org.glassfish:jakarta.json:1.1.6")
+//    implementAndInclude("jakarta.json:jakarta.json-api:1.1.6")
 
     // Guava
     implementation("com.google.guava:guava") { transitive = false }

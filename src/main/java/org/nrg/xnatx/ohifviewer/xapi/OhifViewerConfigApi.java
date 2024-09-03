@@ -71,7 +71,7 @@ import java.util.*;
  *
  * @author mo.alsad
  */
-@Api("OHIF Viewer Config API")
+@Api(description="OHIF Viewer Config API")
 @XapiRestController
 @RequestMapping(value = "/viewerConfig")
 public class OhifViewerConfigApi extends AbstractXapiRestController
@@ -89,7 +89,7 @@ public class OhifViewerConfigApi extends AbstractXapiRestController
     {
         super(userManagementService, roleHolder);
         roiPresetsJsonHandler = new JsonRoiPresetstHandler(configService);
-        logger.info("OHIF Viewer ROI Presets XAPI initialised");
+        logger.info("OHIF Viewer Config XAPI initialised");
     }
 
     @ApiOperation(value = "Returns the ROI Presets for the specified project and ROI type.")

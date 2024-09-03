@@ -7,7 +7,7 @@ import org.springframework.context.annotation.ComponentScan;
 @XnatPlugin(
 	value = "ohifViewerPlugin",
 	name = "XNAT OHIF Viewer Plugin",
-	version = "3.6.3",
+	version = "3.7.0",
 	description = "Integrates the OHIF Cornerstone Viewer into XNAT.",
 	logConfigurationFile="/ohifviewer-logback.xml",
 	dataModels={
@@ -17,7 +17,9 @@ import org.springframework.context.annotation.ComponentScan;
 			plural = "ROI Collections",
 			code = "ROIC")
 	},
-	entityPackages={"icr.xnat.plugin.roi.entity", "org.nrg.xnatx.ohifviewer.entity"},
+	entityPackages={"icr.xnat.plugin.roi.entity",
+		"org.nrg.xnatx.ohifviewer.entity",
+		"org.nrg.xnatx.dicomweb.entity"},
 	openUrls = {"/viewer.html", "/*.js", "/*.stats.json", "/*.css", "/packages/**/*", "/sockjs/**/*"})
 @ComponentScan({
 	"org.nrg.xnatx.ohifviewer.data",
@@ -29,6 +31,10 @@ import org.springframework.context.annotation.ComponentScan;
 	"org.nrg.xnatx.roi.data",
 	"org.nrg.xnatx.roi.event.listeners",
 	"org.nrg.xnatx.roi.service",
-	"org.nrg.xnatx.roi.xapi"})
+	"org.nrg.xnatx.roi.xapi",
+ 	// ICR DICOMweb
+	"org.nrg.xnatx.dicomweb.dao",
+	"org.nrg.xnatx.dicomweb.service",
+	"org.nrg.xnatx.dicomweb.xapi"})
 public class OhifViewerPlugin
 {}

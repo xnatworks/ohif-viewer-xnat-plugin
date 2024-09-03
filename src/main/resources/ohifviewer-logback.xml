@@ -21,6 +21,9 @@
     <logger additivity="false" level="DEBUG" name="org.nrg.xnatx.plugin">
         <appender-ref ref="ohifviewer"/>
     </logger>
+    <logger additivity="false" level="DEBUG" name="org.nrg.xnatx.dicomweb">
+        <appender-ref ref="ohifviewer"/>
+    </logger>
     <logger additivity="false" level="INFO" name="icr.etherj">
         <appender-ref ref="ohifviewer"/>
     </logger>

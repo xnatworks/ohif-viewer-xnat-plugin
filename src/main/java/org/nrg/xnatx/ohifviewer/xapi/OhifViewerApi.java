@@ -42,10 +42,7 @@ import io.swagger.annotations.ApiResponses;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.nrg.framework.annotations.XapiRestController;
-import org.nrg.xapi.rest.AbstractXapiRestController;
-import org.nrg.xapi.rest.Experiment;
-import org.nrg.xapi.rest.Project;
-import org.nrg.xapi.rest.XapiRequestMapping;
+import org.nrg.xapi.rest.*;
 import org.nrg.xdat.model.XnatSubjectassessordataI;
 import org.nrg.xdat.om.XnatExperimentdata;
 import org.nrg.xdat.om.XnatImagesessiondata;
@@ -298,7 +295,7 @@ public class OhifViewerApi extends AbstractXapiRestController
 	)
 	public ResponseEntity<String> postGenerateSubjectJson(
 		final @ApiParam(value="Project ID") @PathVariable("projectId") @Project String projectId,
-		final @ApiParam(value="Subject ID") @PathVariable("subjectId") @Project String subjectId)
+		final @ApiParam(value="Subject ID") @PathVariable("subjectId") @Subject String subjectId)
 		throws PluginException
 	{
 		// Don't allow more generate all processes to be started if one is already

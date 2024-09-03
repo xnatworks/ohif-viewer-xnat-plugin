@@ -35,7 +35,6 @@
 package org.nrg.xnatx.ohifviewer.inputcreator;
 
 import icr.etherj.StringUtils;
-import lombok.extern.slf4j.Slf4j;
 import org.hibernate.engine.jdbc.ClobProxy;
 import org.nrg.config.entities.Configuration;
 import org.nrg.config.services.ConfigService;
@@ -43,6 +42,8 @@ import org.nrg.framework.constants.Scope;
 import org.nrg.framework.services.SerializerService;
 import org.nrg.xdat.om.XnatImagesessiondata;
 import org.nrg.xft.security.UserI;
+import org.nrg.xnatx.dicomweb.conf.DicomwebDeviceConfiguration;
+import org.nrg.xnatx.dicomweb.toolkit.DicomwebUtils;
 import org.nrg.xnatx.ohifviewer.entity.OhifSessionData;
 import org.nrg.xnatx.ohifviewer.service.OhifSessionDataService;
 import org.nrg.xnatx.plugin.PluginCode;
@@ -142,7 +143,16 @@ public class JsonMetadataHandler
 			throw new PluginException("User must not be null",
 					PluginCode.HttpUnprocessableEntity);
 		}
+
 		String sessionId = sessionData.getId();
+
+		// Exclude JSON generation if supported by the DICOMweb service
+		String modality = PluginUtils.getImageSessionModality(sessionData);
+		if (DicomwebDeviceConfiguration.isDicomwebModality(modality)) {
+			createEmptySessionJson(sessionData);
+			return;
+		}
+
 		Path jsonPath;
 		try {
 			jsonPath = loadFromConfigOrCreateJsonTempFile(sessionId, sessionData, ignoreExisting);
@@ -181,6 +191,21 @@ public class JsonMetadataHandler
 		logger.info("Got request to delete OHIF metadata for session ID {}, proceeding", sessionId);
 		ohifSessionDataService.delete(data);
 		return true;
+	}
+
+	private void createEmptySessionJson(XnatImagesessiondata sessionData)
+		throws PluginException
+	{
+		String sessionId = sessionData.getId();
+		String studyUid = sessionData.getUid();
+		String sessionJson =
+			DicomwebUtils.generateEmptySessionJson(sessionId, studyUid);
+
+		OhifSessionData ohifSessionData = new OhifSessionData();
+		ohifSessionData.setSessionId(sessionId);
+		ohifSessionData.setRevision(Integer.toString(JsonRevision));
+		ohifSessionData.setSessionJson(ClobProxy.generateProxy(sessionJson));
+		ohifSessionDataService.createOrUpdate(ohifSessionData);
 	}
 
 	private Path loadFromConfigOrCreateJsonTempFile(String sessionId, XnatImagesessiondata sessionData,
