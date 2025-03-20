@@ -67,25 +67,7 @@ public class HttpUtils
 	public static StringBuffer fixUrlScheme(String requestUrl)
 	{
 		String siteUrl = XDAT.getSiteUrl();
-		String siteScheme = null;
-		try
-		{
-			URI uri = new URI(siteUrl);
-			siteScheme = uri.getScheme();
-		}
-		catch (URISyntaxException e)
-		{
-			// Ignore
-		}
-
-		if (siteScheme == null)
-		{
-			return new StringBuffer(requestUrl);
-		}
-
-		UriComponentsBuilder builder =
-			UriComponentsBuilder.fromHttpUrl(requestUrl);
-		String modifiedSiteUrl = builder.scheme(siteScheme).toUriString();
+		String modifiedSiteUrl = siteUrl + requestUrl.substring(requestUrl.indexOf("/xapi/viewerDicomweb"));
 
 		return new StringBuffer(modifiedSiteUrl);
 	}
