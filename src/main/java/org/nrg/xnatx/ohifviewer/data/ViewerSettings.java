@@ -1,5 +1,5 @@
-/********************************************************************
- * Copyright (c) 2023, Institute of Cancer Research
+/*********************************************************************
+ * Copyright (c) 2025, Institute of Cancer Research
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,43 +32,57 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *********************************************************************/
-package org.nrg.xnatx.dicomweb.toolkit;
+package org.nrg.xnatx.ohifviewer.data;
 
-import lombok.extern.slf4j.Slf4j;
-import org.nrg.xdat.XDAT;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.util.UriComponentsBuilder;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.swagger.annotations.ApiModelProperty;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.util.Objects;
 
 /**
- * @author m.alsad
+ *
+ * @author mo.alsad
  */
-@Slf4j
-public class HttpUtils
+public class ViewerSettings
 {
-	public static ResponseEntity<?> errorResponse(String errorMessage,
-		HttpStatus status)
-	{
-		log.warn("Response {} caused by {}", status, errorMessage);
+    @ApiModelProperty(value = "Parse Multi-stack Images", example = "true", required = true)
+    @JsonProperty("multistack")
+    private boolean useMultiStack = false;
 
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.TEXT_PLAIN);
-		String body = "Error: " + errorMessage;
-		return new ResponseEntity<>(body, headers, status);
-	}
+    public ViewerSettings() { }
 
-	public static StringBuffer fixUrlScheme(String requestUrl)
-	{
-		String siteUrl = XDAT.getSiteUrl();
-		String modifiedSiteUrl = siteUrl + requestUrl.substring(requestUrl.indexOf("/xapi/viewerDicomweb"));
+    public ViewerSettings(boolean multistack)
+    {
+        this.useMultiStack = multistack;
+    }
 
-		return new StringBuffer(modifiedSiteUrl);
-	}
+    public boolean isMultistack()
+    {
+        return useMultiStack;
+    }
+
+    public void setMultistack(boolean multistack)
+    {
+        this.useMultiStack = multistack;
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+
+        ViewerSettings other = (ViewerSettings) obj;
+        return Objects.equals(useMultiStack, other.useMultiStack);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "ViewerSettings: useMultiStack="+ useMultiStack;
+    }
 }

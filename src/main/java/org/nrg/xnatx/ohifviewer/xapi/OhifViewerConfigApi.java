@@ -50,6 +50,8 @@ import org.nrg.xdat.security.helpers.AccessLevel;
 import org.nrg.xdat.security.services.RoleHolder;
 import org.nrg.xdat.security.services.UserManagementServiceI;
 import org.nrg.xft.security.UserI;
+import org.nrg.xnatx.ohifviewer.JsonSettingsHandler;
+import org.nrg.xnatx.ohifviewer.data.ViewerSettings;
 import org.nrg.xnatx.plugin.PluginCode;
 import org.nrg.xnatx.plugin.PluginException;
 import org.nrg.xnatx.plugin.Security;
@@ -82,6 +84,7 @@ public class OhifViewerConfigApi extends AbstractXapiRestController
     private final String[] allowableRoiTypes = {Constants.AIM,
         Constants.Segmentation, Constants.Measurement};
     private final JsonRoiPresetstHandler roiPresetsJsonHandler;
+    private final JsonSettingsHandler settingsJsonHandler;
 
     protected OhifViewerConfigApi(final ConfigService configService,
         final UserManagementServiceI userManagementService,
@@ -89,6 +92,7 @@ public class OhifViewerConfigApi extends AbstractXapiRestController
     {
         super(userManagementService, roleHolder);
         roiPresetsJsonHandler = new JsonRoiPresetstHandler(configService);
+        settingsJsonHandler = new JsonSettingsHandler(configService);
         logger.info("OHIF Viewer Config XAPI initialised");
     }
 
@@ -125,8 +129,8 @@ public class OhifViewerConfigApi extends AbstractXapiRestController
                 " by user "+user.getUsername());
         }
         Security.checkProject(user, projectId);
-        Map<String, Configuration> projectConfigMap = getProjectConfigMap(projectId, roiType);
-        return buildResponseFromConfigMap(projectConfigMap);
+        Map<String, Configuration> projectConfigMap = getRoiPresetProjectConfigMap(projectId, roiType);
+        return buildRoiPresetResponseFromConfigMap(projectConfigMap);
     }
 
     @ApiOperation(value = "Sets the ROI Presets for the specified project and ROI type.")
@@ -154,7 +158,7 @@ public class OhifViewerConfigApi extends AbstractXapiRestController
                 !Arrays.asList(allowableRoiTypes).contains(type))
         {
             throw new PluginException(
-                "Collection type "+type+" not supported.",
+                "Collection type "+ type +" not supported.",
                 PluginCode.HttpUnprocessableEntity);
         }
         UserI user = getSessionUser();
@@ -162,16 +166,80 @@ public class OhifViewerConfigApi extends AbstractXapiRestController
         if (logger.isDebugEnabled())
         {
             logger.debug("PUT /viewerConfig/projects/"+projectId+"/roipreset"+
-                " roiType="+type+
+                " roiType="+ type +
                 " by user "+user.getUsername());
         }
         String json = parseRoiPresetList(roiPresetList);
         roiPresetsJsonHandler.setProjectJsonConfig(user, projectId, type, json);
-        return new ResponseEntity<>("Updated "+type+" ROI presets for project "+projectId,
+        return new ResponseEntity<>("Updated "+ type +" ROI presets for project "+projectId,
                 HttpStatus.OK);
     }
 
-    private ResponseEntity<Map<String, List<RoiPreset>>> buildResponseFromConfigMap(
+    @ApiOperation(value = "Returns the OHIF-Viewer settings for the specified project ID.")
+    @ApiResponses(
+    {
+        @ApiResponse(code = 200, message = "The project was located and JSON ROI Presets returned."),
+        @ApiResponse(code = 403, message = "The user does not have permission to view the indicated project."),
+        @ApiResponse(code = 404, message = "The JSON OHIF-Viewer settings were not found for the indicated project."),
+        @ApiResponse(code = 422, message = "Unprocessable request"),
+        @ApiResponse(code = 500, message = "An unexpected error occurred.")
+    })
+    @XapiRequestMapping(
+        value = "projects/{projectId}",
+        produces = MediaType.APPLICATION_JSON_VALUE,
+        method = RequestMethod.GET,
+        restrictTo = AccessLevel.Read
+    )
+    @ResponseBody
+    public ResponseEntity<ViewerSettings>  getViewerSettings(
+        final @ApiParam(value="Project ID") @PathVariable("projectId") @Project String projectId)
+        throws PluginException
+    {
+        UserI user = getSessionUser();
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("GET /viewerConfig/projects/"+projectId+
+                    " by user "+user.getUsername());
+        }
+        Security.checkProject(user, projectId);
+        Configuration settingsConfig = settingsJsonHandler.getProjectJsonConfig(projectId);
+        return processSettingsJsonConfig(settingsConfig);
+    }
+
+	@ApiOperation(value = "Sets the OHIF-Viewer settings for the specified project ID")
+	@ApiResponses(
+    {
+        @ApiResponse(code = 200, message = "The project was located and Viewer settings were stored."),
+        @ApiResponse(code = 403, message = "The user does not have permission to access the resource."),
+        @ApiResponse(code = 422, message = "Unprocessable request"),
+        @ApiResponse(code = 500, message = "An unexpected error occurred.")
+    })
+	@XapiRequestMapping(
+        value = "projects/{projectId}",
+        consumes = MediaType.APPLICATION_JSON_VALUE,
+        method = RequestMethod.PUT,
+        restrictTo = AccessLevel.Admin
+	)
+	@ResponseBody
+	public ResponseEntity<String> setViewerSettings(
+        final @ApiParam(value="Project ID") @PathVariable("projectId") @Project String projectId,
+        @RequestBody ViewerSettings viewerSettings)
+        throws PluginException
+	{
+		UserI user = getSessionUser();
+		Security.checkProject(user, projectId);
+		if (logger.isDebugEnabled())
+		{
+			logger.debug("PUT /viewerConfig/projects/"+projectId+
+					" by user "+user.getUsername());
+		}
+		String json = parseViewerSettings(viewerSettings);
+		settingsJsonHandler.setProjectJson(user, projectId, json);
+		return new ResponseEntity<>("Updated the viewer settings for project "+projectId,
+				HttpStatus.OK);
+	}
+
+    private ResponseEntity<Map<String, List<RoiPreset>>> buildRoiPresetResponseFromConfigMap(
         Map<String, Configuration> configMap)
         throws PluginException
     {
@@ -207,7 +275,7 @@ public class OhifViewerConfigApi extends AbstractXapiRestController
         return ResponseEntity.ok(roiPresetListMap);
     }
 
-    private Map<String, Configuration> getProjectConfigMap(String projectId, String roiType)
+    private Map<String, Configuration> getRoiPresetProjectConfigMap(String projectId, String roiType)
         throws PluginException
     {
         Map<String, Configuration> projectConfigMap = new HashMap<>();
@@ -274,4 +342,48 @@ public class OhifViewerConfigApi extends AbstractXapiRestController
         }
         return json;
     }
+
+    private ResponseEntity<ViewerSettings> processSettingsJsonConfig(
+			Configuration settingsConfig) throws PluginException
+    {
+		if (settingsConfig == null)
+		{
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+		String json = settingsConfig.getContents();
+		if (StringUtils.isNullOrEmpty(json))
+		{
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+		}
+
+        ObjectMapper mapper = new ObjectMapper();
+		ViewerSettings settings;
+		try
+		{
+			settings = mapper.readValue(json, ViewerSettings.class);
+		}
+		catch (JsonProcessingException ex)
+		{
+			throw new PluginException("Error reading settings JSON: "+ex.getMessage(),
+					PluginCode.HttpUnprocessableEntity, ex);
+		}
+		return new ResponseEntity<>(settings, HttpStatus.OK);
+	}
+
+	private String parseViewerSettings(ViewerSettings viewerSettings) throws PluginException
+	{
+		ObjectMapper mapper = new ObjectMapper();
+		String json;
+
+		try
+		{
+			json = mapper.writeValueAsString(viewerSettings);
+		}
+		catch (JsonProcessingException ex)
+		{
+			throw new PluginException("Error creating JSON: "+ex.getMessage(),
+                PluginCode.HttpUnprocessableEntity, ex);
+		}
+		return json;
+	}
 }

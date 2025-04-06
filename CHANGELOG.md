@@ -1,3 +1,17 @@
+**3.7.1**
+
+- Dynamic retrieval of viewer settings from XNAT.
+- Improved the processing of the Enhanced MR images so that it becomes possible to:
+  - detect irregular spacing and missing frames,
+  - calculate the volume of contour and mask ROIs, and
+  - jump to frames relevant to an ROI.
+- Refactor the annotations API and UI components to accommodate the multi-stack configuration.
+- Fixed the import and export of masks with Enhanced MR as a reference dataset.
+- Fixed metadata configuration for multi-frame images, allowing for mask import/export.
+- Fixed a bug causing the sculptor and contour drawing tools to freeze.
+- Fixed the rotation of the pathology slide preview in the thumbnail images.
+- Fixed scan brightness and contrast in 3D MPR.
+
 **3.7.0**
 
 - Supporting DICOM Microscopy images as per the prerelease notes listed below.

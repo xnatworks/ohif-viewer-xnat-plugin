@@ -24,7 +24,7 @@ mkdir -p "${VIEWER_TARGET}"
 cd "${VIEWER_ROOT}"
 echo "Building OHIF Viewer: "`pwd`
 yarn config set workspaces-experimental true
-yarn install
+yarn install --check-files
 yarn run build:xnat
 if [ $? -ne 0 ]; then
 	exit
