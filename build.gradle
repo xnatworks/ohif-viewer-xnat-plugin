@@ -1,53 +1,139 @@
 buildscript {
     ext {
-        vXnat = '1.8.10'
-        pluginAppName = "ICR/XNAT OHIF Viewer Plugin"
-    }
-    repositories {
-        mavenLocal()
-        jcenter()
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
-        maven {
-            url 'https://nrgxnat.jfrog.io/nrgxnat/libs-release'
-            name 'XNAT Release Repository'
-        }
-        maven {
-            url 'https://nrgxnat.jfrog.io/nrgxnat/libs-snapshot'
-            name 'XNAT Snapshot Repository'
-        }
-    }
-    dependencies {
-        classpath "org.nrg.xnat.build:xnat-data-builder:${vXnat}"
-        classpath "io.spring.gradle:dependency-management-plugin:1.1.0"
-        classpath "com.palantir.gradle.gitversion:gradle-git-version:0.12.3"
-        classpath "io.franzbecker:gradle-lombok:5.0.0"
+        vXnat = "1.10.0-SNAPSHOT"
     }
 }
 
-group 'org.nrg.xnatx.plugins'
-version '3.7.1'
+plugins {
+    id "eclipse"
+    id "idea"
+    id "jacoco"
+    id "java"
+    id "maven-publish"
+    id "com.palantir.git-version" version "4.0.0"
+    id "io.franzbecker.gradle-lombok" version "5.0.0"
+    id "io.spring.dependency-management" version "1.1.7"
+    id "org.nrg.xnat.build.xnat-data-builder" version "${vXnat}"
+}
 
-apply plugin: 'io.spring.dependency-management'
-apply plugin: 'java'
-apply plugin: 'maven-publish'
-apply plugin: 'idea'
-apply plugin: 'eclipse'
-apply plugin: 'io.franzbecker.gradle-lombok'
-apply plugin: 'com.palantir.git-version'
-apply plugin: 'org.nrg.xnat.build.xnat-data-builder'
+group = "org.nrg.xnatx.plugins"
+version = "3.8.0-SNAPSHOT"
+description = "OHIF Viewer plugin for XNAT"
+
+repositories {
+    mavenLocal()
+    maven { url = "https://nrgxnat.jfrog.io/nrgxnat/libs-release" }
+    maven { url = "https://nrgxnat.jfrog.io/nrgxnat/libs-snapshot" }
+    maven { url = "https://jitpack.io" }
+    mavenCentral()
+}
+
+configurations {
+    configureEach {
+        exclude group: "log4j"
+    }
+    implementation.extendsFrom(implementAndInclude)
+}
+
+dependencyManagement.imports {
+    mavenBom "org.nrg:parent:${vXnat}"
+}
+
+dependencies {
+    implementation "javax.servlet:javax.servlet-api"
+
+    implementation("org.nrg.xnat:web") { transitive = false }
+    implementation("org.nrg.xnat:xnat-data-models") { transitive = false }
+    implementation("org.nrg.xdat:core") { transitive = false }
+    implementation("org.nrg:automation") { transitive = false }
+    implementation("org.nrg:config") { transitive = false }
+    implementation("org.nrg:dicomtools") { transitive = false }
+    implementation("org.nrg:dicom-xnat-mx") { transitive = false }
+    implementation("org.nrg:dicom-xnat-sop") { transitive = false }
+    implementation("org.nrg:framework")
+    implementation("org.nrg:prefs") { transitive = false }
+
+    implementation("turbine:turbine") { transitive = false }
+    implementation("org.apache.velocity:velocity") { transitive = false }
+
+    implementation "org.springframework:spring-web"
+    implementation "org.springframework:spring-webmvc"
+    implementation "org.springframework:spring-context"
+    implementation "org.springframework.security:spring-security-core"
+
+    implementation "io.springfox:springfox-swagger2"
+    implementation "commons-io:commons-io"
+    implementation "commons-codec:commons-codec"
+    implementation "org.apache.commons:commons-lang3"
+    implementation("io.projectreactor:reactor-core") { transitive = false }
+    implementation("io.projectreactor:reactor-bus") { transitive = false }
+
+    implementation("org.slf4j:slf4j-api") { transitive = false }
+    implementation("org.slf4j:slf4j-log4j12") { transitive = false }
+    implementation("log4j:log4j") { transitive = false }
+    implementation("dcm4che:dcm4che-core") { transitive = false }
+    implementation("com.google.code.gson:gson") { transitive = false }
+
+    // ICR DICOMweb
+    // vDcm4che matching dcm4che5.version
+    // in https://bitbucket.org/xnatdev/parent/src/master/pom.xml
+    def vDcm4che = "5.31.0"
+    implementation("org.dcm4che:dcm4che-core:${vDcm4che}") { transitive = false }
+    implementation("org.dcm4che:dcm4che-image:${vDcm4che}") { transitive = false }
+    implementation("org.dcm4che:dcm4che-imageio:${vDcm4che}") { transitive = false }
+    implementAndInclude("org.dcm4che:dcm4che-json:${vDcm4che}") { transitive = false }
+    implementAndInclude("org.glassfish:jakarta.json:1.1.6")
+
+    // Guava
+    implementation("com.google.guava:guava") { transitive = false }
+    implementation("com.fasterxml.jackson.core:jackson-annotations") { transitive = false }
+    implementation("com.fasterxml.jackson.core:jackson-core") { transitive = false }
+    implementation("com.fasterxml.jackson.core:jackson-databind") { transitive = false }
+    // Logback
+    implementation("ch.qos.logback:logback-classic") { transitive = false }
+    implementation("ch.qos.logback:logback-core") { transitive = false }
+     // EtherJ
+    def vEtherJ = "1.1.6"
+    implementAndInclude("icr.etherj:etherj-core:${vEtherJ}") { transitive = false }
+
+    testImplementation "org.slf4j:slf4j-nop:1.7.25"
+    testImplementation "junit:junit"
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+compileJava {
+    options.fork = false
+}
 
 idea {
     module {
-        downloadSources = true
-        downloadJavadoc = true
+        inheritOutputDirs = false
+        outputDir = compileJava.destinationDirectory.asFile.get()
+        testOutputDir = compileTestJava.destinationDirectory.asFile.get()
     }
 }
 
-// Use this configuration to put dependencies into the fat jar
-configurations {
-    implementation.extendsFrom(implementAndInclude)
+lombok {
+    version = dependencyManagement.importedProperties["lombok.version"] as String
+    sha256 = dependencyManagement.importedProperties["lombok.checksum"] as String
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir "build/xnat-generated/src/main/java"
+        }
+        resources {
+            srcDir "build/xnat-generated/src/main/resources"
+        }
+    }
 }
 
 // Pulls in the Jenkins BUILD_NUMBER environment variable if available.
@@ -75,163 +161,52 @@ try {
     isCleanTag = false
 }
 
-ext.gitManifest = manifest {
-    attributes "Application-Name": pluginAppName,
-            "Build-Date": buildDate,
-            "Build-Number": buildNumber,
-            "Implementation-Version": project.version,
-            "Implementation-Sha": gitHash,
-            "Implementation-Sha-Full": gitHashFull,
-            "Implementation-Commit": commitDistance,
-            "Implementation-LastTag": lastTag,
-            "Implementation-Branch": branchName,
-            "Implementation-CleanTag": isCleanTag,
-            "Implementation-Dirty": isDirty
-}
-
-jar {
+tasks.withType(Jar).configureEach {
     manifest {
-        from gitManifest
+        attributes "Application-Name": project.description,
+                "Build-Date": buildDate,
+                "Build-Number": buildNumber,
+                "Implementation-Version": project.version,
+                "Implementation-Sha": gitHash,
+                "Implementation-Sha-Full": gitHashFull,
+                "Implementation-Commit": commitDistance,
+                "Implementation-LastTag": lastTag,
+                "Implementation-Branch": branchName,
+                "Implementation-CleanTag": isCleanTag,
+                "Implementation-Dirty": isDirty
     }
 }
 
-task fatJar(type: Jar) {
-    zip64 true
-    archiveClassifier.set "fat"
-    archiveBaseName.set project.name
-    from { configurations.implementAndInclude.collect { it.isDirectory() ? it : zipTree(it) } }
-    manifest {
-        from gitManifest
+tasks.register("xnatPluginJar", Jar) {
+    zip64 = true
+    archiveClassifier = "xpl"
+
+    // files and folders with "-dev" or "--xx" in their name
+    // will not be in the compiled jar
+    exclude "**/resources/**/*-dev**"
+    exclude "**/resources/**/*--xx**"
+
+    from {
+        configurations.implementAndInclude.collect { it.isDirectory() ? it : zipTree(it) }
+    } {
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
     }
     with jar
-}
-
-repositories {
-    mavenLocal()
-    mavenCentral()
-    jcenter()
-    maven {
-        url 'https://www.dcm4che.org/maven2'
-        name 'dcm4che Maven Repository'
-    }
-    maven {
-        url 'https://nrgxnat.jfrog.io/nrgxnat/libs-release'
-        name 'XNAT Release Repository'
-    }
-    maven {
-        url 'https://nrgxnat.jfrog.io/nrgxnat/libs-snapshot'
-        name 'XNAT Snapshot Repository'
-    }
-    maven {
-        url 'https://nrgxnat.jfrog.io/nrgxnat/ext-release-local'
-        name 'XNAT External Release (Local) Repository'
-    }
-    maven {
-        url 'https://nrgxnat.jfrog.io/nrgxnat/ext-snapshot-local'
-        name 'XNAT External Snapshot (Local) Repository'
-    }
-    maven {
-        url 'https://jitpack.io'
-    }
-
-}
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
-dependencyManagement.imports {
-    mavenBom "org.nrg:parent:${vXnat}"
-}
-
-dependencies {
-    implementation "javax.servlet:javax.servlet-api"
-
-    implementation("org.nrg.xnat:web") { transitive = false }
-    implementation("org.nrg.xnat:xnat-data-models") { transitive = false }
-    implementation("org.nrg.xdat:core") { transitive = false }
-    implementation("org.nrg:automation") { transitive = false }
-    implementation("org.nrg:config") { transitive = false }
-    implementation("org.nrg:dicomtools") { transitive = false }
-    implementation("org.nrg:dicom-xnat-mx") { transitive = false }
-    implementation("org.nrg:dicom-xnat-sop") { transitive = false }
-    implementation("org.nrg:framework")
-    implementation("org.nrg:prefs") { transitive = false }
-
-    implementation("turbine:turbine") { transitive = false }
-    implementation("org.apache.velocity:velocity") { transitive = false }
-//    implementation ('stratum:stratum') { transitive = false }
-
-    implementation "org.springframework:spring-web"
-    implementation "org.springframework:spring-webmvc"
-    implementation "org.springframework:spring-context"
-    implementation "org.springframework.security:spring-security-core"
-
-    implementation "io.springfox:springfox-swagger2"
-    implementation "commons-io:commons-io"
-    implementation "commons-codec:commons-codec"
-    implementation "org.apache.commons:commons-lang3"
-    implementation("io.projectreactor:reactor-core") { transitive = false }
-    implementation("io.projectreactor:reactor-bus") { transitive = false }
-
-    implementation("org.slf4j:slf4j-api") { transitive = false }
-    implementation("org.slf4j:slf4j-log4j12") { transitive = false }
-    implementation("log4j:log4j") { transitive = false }
-    implementation("dcm4che:dcm4che-core") { transitive = false }
-    implementation("com.google.code.gson:gson") { transitive = false }
-
-    // ICR DICOMweb
-    // vDcm4che matching dcm4che5.version
-    // in https://bitbucket.org/xnatdev/parent/src/master/pom.xml
-    def vDcm4che = '5.31.0'
-    implementation("org.dcm4che:dcm4che-core:${vDcm4che}") { transitive = false }
-    implementation("org.dcm4che:dcm4che-image:${vDcm4che}") { transitive = false }
-    implementation("org.dcm4che:dcm4che-imageio:${vDcm4che}") { transitive = false }
-    implementAndInclude("org.dcm4che:dcm4che-json:${vDcm4che}") { transitive = false }
-    implementAndInclude("org.glassfish:jakarta.json:1.1.6")
-//    implementAndInclude("jakarta.json:jakarta.json-api:1.1.6")
-
-    // Guava
-    implementation("com.google.guava:guava") { transitive = false }
-    implementation("com.fasterxml.jackson.core:jackson-annotations") { transitive = false }
-    implementation("com.fasterxml.jackson.core:jackson-core") { transitive = false }
-    implementation("com.fasterxml.jackson.core:jackson-databind") { transitive = false }
-    // Logback
-    implementation("ch.qos.logback:logback-classic") { transitive = false }
-    implementation("ch.qos.logback:logback-core") { transitive = false }
-     // EtherJ
-    def vEtherJ = '1.1.6'
-    implementAndInclude("icr.etherj:etherj-core:${vEtherJ}") { transitive = false }
-
-    testImplementation "org.slf4j:slf4j-nop:1.7.25"
-    testImplementation "junit:junit"
-}
-
-// This tells the compiler where to find source code. This isn't required in a
-// standard build, but the XNAT data builder generates code from XNAT data-type
-// schemas that the compiler needs to know about.
-sourceSets {
-    main {
-        java {
-            srcDir 'src/main/java'
-            srcDir 'build/xnat-generated/src/main/java'
-        }
-        resources {
-            srcDir 'src/main/resources'
-            srcDir 'build/xnat-generated/src/main/resources'
-        }
-    }
 }
 
 publishing {
     publications {
         mavenJava(MavenPublication) {
             artifacts {
-                artifact fatJar
+                artifact sourcesJar
+                artifact xnatPluginJar
             }
 
             pom.withXml {
                 def root = asNode()
-                root.appendNode("name", pluginAppName)
+                root.appendNode("name", project.description)
                 root.appendNode("url", "https://bitbucket.org/icrimaginginformatics/ohif-viewer-xnat-plugin")
                 root.appendNode("inceptionYear", "2019")
 
@@ -277,14 +252,10 @@ publishing {
             credentials {
                 // These properties must be set in the ~/.gradle/gradle.properties file or passed on the Gradle command
                 // line in the form -PrepoUsername=foo -PrepoPassword=bar.
-                username propertyWithDefault("repoUsername", "username")
-                password propertyWithDefault("repoPassword", "password")
+                username = propertyWithDefault("repoUsername", "username")
+                password = propertyWithDefault("repoPassword", "password")
             }
-            if (project.version.endsWith("-SNAPSHOT")) {
-                url "https://nrgxnat.jfrog.io/nrgxnat/libs-snapshot-local"
-            } else {
-                url "https://nrgxnat.jfrog.io/nrgxnat/libs-release-local"
-            }
+            url = "https://maven.dev.radiologics.com/repository/${version.endsWith("SNAPSHOT") ? "snapshots" : "internal"}"
         }
     }
 }

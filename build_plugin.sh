@@ -6,10 +6,10 @@ VIEWER_DIST=${VIEWER_ROOT}/platform/viewer/dist
 VIEWER_TARGET=${PLUGIN_ROOT}/src/main/resources/META-INF/resources/VIEWER
 
 [[ -z "${1}" ]] && {
-    BUILD_ARGS="clean fatJar"
+    BUILD_ARGS="clean xnatPluginJar"
 } || {
     BUILD_ARGS="${@}"
-    [[ $(echo "${BUILD_ARGS}" | grep -iF fatJar | wc -l | tr -d ' ') == 0 ]] && { BUILD_ARGS="fatJar ${BUILD_ARGS}"; }
+    [[ $(echo "${BUILD_ARGS}" | grep -iF xnatPluginJar | wc -l | tr -d ' ') == 0 ]] && { BUILD_ARGS="xnatPluginJar ${BUILD_ARGS}"; }
     [[ $(echo "${BUILD_ARGS}" | grep -iF clean | wc -l | tr -d ' ') == 0 ]] && { BUILD_ARGS="clean ${BUILD_ARGS}"; }
 }
 

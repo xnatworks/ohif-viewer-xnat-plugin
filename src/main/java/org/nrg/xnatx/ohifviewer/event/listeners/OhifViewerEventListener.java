@@ -53,12 +53,12 @@ import org.nrg.xnatx.ohifviewer.inputcreator.JsonMetadataHandler;
 import org.nrg.xnatx.plugin.PluginException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.bus.Event;
 import reactor.bus.EventBus;
 import reactor.fn.Consumer;
 
-import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -81,7 +81,7 @@ public class OhifViewerEventListener
 	private final Map<String, Boolean> triggerPipelines = new HashMap<>();
 	private final Map<String, Boolean> triggerPipelinesSubject = new HashMap<>();
 
-	@Inject
+	@Autowired
 	public OhifViewerEventListener(EventBus eventBus, AnonUtils anonUtils,
 		DicomwebInputHandler dwInputHandler, JsonMetadataHandler jsonHandler)
 	{

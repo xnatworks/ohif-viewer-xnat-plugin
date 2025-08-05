@@ -35,12 +35,12 @@
 package org.nrg.xnatx.roi.event.listeners;
 
 import org.nrg.xnatx.roi.service.RoiService;
-import javax.inject.Inject;
 import org.nrg.xdat.om.WrkWorkflowdata;
 import org.nrg.xft.event.entities.WorkflowStatusEvent;
 import org.nrg.xft.event.persist.PersistentWorkflowUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.bus.Event;
 import reactor.bus.EventBus;
@@ -59,7 +59,7 @@ public class RoiCollectionEventListener implements Consumer<Event<WorkflowStatus
 
 	private final RoiService roiService;
 
-	@Inject
+	@Autowired
 	public RoiCollectionEventListener(EventBus eventBus, RoiService roiService)
 	{
 		this.roiService = roiService;
