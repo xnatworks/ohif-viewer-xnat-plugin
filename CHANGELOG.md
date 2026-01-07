@@ -1,3 +1,10 @@
+**3.7.2**
+
+- Added keyboard shortcuts to browse stacks in a multi-stack scan.
+- Prioritise the image plane information if provided in the root metadata.
+- Fixed invalid order and dimension indices of multi-stack (4D) caused by non-compliant metadata.
+- Fixed nested value of the PatientName tag in measurements.
+
 **3.7.1**
 
 - Dynamic retrieval of viewer settings from XNAT.
