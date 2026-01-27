@@ -97,6 +97,7 @@ jar {
 
 task fatJar(type: Jar) {
     zip64 true
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     archiveClassifier.set "fat"
     archiveBaseName.set project.name
     from { configurations.implementAndInclude.collect { it.isDirectory() ? it : zipTree(it) } }
@@ -113,6 +114,10 @@ repositories {
     maven {
         url 'https://www.dcm4che.org/maven2'
         name 'dcm4che Maven Repository'
+    }
+    maven {
+        url 'https://raw.github.com/nroduit/mvn-repo/master'
+        name 'Weasis Maven Repository'
     }
     maven {
         url 'https://nrgxnat.jfrog.io/nrgxnat/libs-release'
@@ -188,13 +193,13 @@ dependencies {
     // ICR DICOMweb
     // vDcm4che matching dcm4che5.version
     // in https://bitbucket.org/xnatdev/parent/src/master/pom.xml
-    def vDcm4che = '5.31.0'
+    def vDcm4che = '5.33.1'
     implementation("org.dcm4che:dcm4che-core:${vDcm4che}") { transitive = false }
     implementation("org.dcm4che:dcm4che-image:${vDcm4che}") { transitive = false }
     implementation("org.dcm4che:dcm4che-imageio:${vDcm4che}") { transitive = false }
     implementAndInclude("org.dcm4che:dcm4che-json:${vDcm4che}") { transitive = false }
-    implementAndInclude("org.glassfish:jakarta.json:1.1.6")
-//    implementAndInclude("jakarta.json:jakarta.json-api:1.1.6")
+    implementAndInclude("org.glassfish:jakarta.json:2.0.1")
+    implementAndInclude("jakarta.json:jakarta.json-api:2.1.3")
 
     // Guava
     implementation("com.google.guava:guava") { transitive = false }
