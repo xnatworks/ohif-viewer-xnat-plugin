@@ -1,3 +1,9 @@
+**3.8.0**
+
+- Updated codebase to compile in Java21 
+- Updated dcm4che from 5.31.0-javax to 5.33.1-jakarta and updated related methods in DicomWeb service
+- Prevent error on startup that misinterprets non-schema elements in XNAT's data_type object
+
 **3.7.2**
 
 - Added keyboard shortcuts to browse stacks in a multi-stack scan.
