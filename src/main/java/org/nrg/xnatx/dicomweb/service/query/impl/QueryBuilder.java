@@ -547,8 +547,7 @@ public class QueryBuilder
 		String[] cuidsInStudy = keys.getStrings(Tag.SOPClassesInStudy);
 		if (!isUniversalMatching(cuidsInStudy))
 		{
-			predicates.add(Restrictions.in("series.sopClassUid",
-				cuidsInStudy));
+			predicates.add(Restrictions.in("series.sopClassUid", (Object[]) cuidsInStudy));
 		}
 		if (queryRetrieveLevel == QueryRetrieveLevel2.STUDY)
 		{
