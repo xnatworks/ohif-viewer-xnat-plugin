@@ -34,6 +34,8 @@
  *********************************************************************/
 package org.nrg.xnatx.ohifviewer.event.listeners;
 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.nrg.xdat.om.WrkWorkflowdata;
 import org.nrg.xdat.om.XnatImagesessiondata;
 import org.nrg.xdat.om.XnatSubjectassessordata;
@@ -51,8 +53,6 @@ import org.nrg.xnatx.dicomweb.service.inputcreator.DicomwebInputHandler;
 import org.nrg.xnatx.dicomweb.toolkit.DicomwebUtils;
 import org.nrg.xnatx.ohifviewer.inputcreator.JsonMetadataHandler;
 import org.nrg.xnatx.plugin.PluginException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import reactor.bus.Event;
 import reactor.bus.EventBus;
@@ -65,16 +65,12 @@ import java.util.Map;
 import static reactor.bus.selector.Selectors.R;
 
 /**
- *
  * @author jpetts
  */
 @Service
-public class OhifViewerEventListener
-	implements Consumer<Event<WorkflowStatusEvent>>
+@Slf4j
+public class OhifViewerEventListener implements Consumer<Event<WorkflowStatusEvent>>
 {
-	private static final Logger logger = LoggerFactory.getLogger(
-		OhifViewerEventListener.class);
-
 	private final AnonUtils anonUtils;
 	private final DicomwebInputHandler dwInputHandler;
 	private final JsonMetadataHandler jsonHandler;
@@ -93,7 +89,7 @@ public class OhifViewerEventListener
 		this.dwInputHandler = dwInputHandler;
 		this.jsonHandler = jsonHandler;
 		createTriggers();
-		logger.info("OHIF Viewer event listener initialised");
+		log.info("OHIF Viewer event listener initialised");
 	}
 
 	@Override
@@ -115,7 +111,7 @@ public class OhifViewerEventListener
 		triggerPipelines.put(EventUtils.TRANSFER, false); // Session created
 		triggerPipelines.put("Merged", false); // Data added to existing session
 		triggerPipelines.put("Removed scan", false);
-		// Special conversion for DICOM uploaded outside of XNAT’s normal
+		// Special conversion for DICOM uploaded outside XNAT’s normal
 		// importers, it sets proper metadata and converts catalogs to DCM type.
 		// It does NOT apply anon, but it will be the first we hear of these files
 		// as DICOM (a.k.a., no TRANSFER or MERGE event)
@@ -137,7 +133,12 @@ public class OhifViewerEventListener
 		String dataType = workflow.getDataType();
 		String id = workflow.getId();
 
-		logger.debug("Handling event in OhifViewerEventListener. PipelineName: {}, DataType: {}, ID: {}",
+        if (!StringUtils.contains(dataType, ":")) {
+            log.debug("Got a workflow status event for data type {} and ID {}, but that's not an XFT data object, skipping", dataType, id);
+            return;
+        }
+
+		log.debug("Handling event in OhifViewerEventListener. PipelineName: {}, DataType: {}, ID: {}",
 				pipelineName, dataType, id);
 
 		UserI user = workflow.getUser();
@@ -145,7 +146,7 @@ public class OhifViewerEventListener
 		try {
 			se = SchemaElement.GetElement(dataType);
 		} catch (XFTInitException | ElementNotFoundException e) {
-			logger.error("Unable to determine SchemaElement for dataType {}", dataType, e);
+			log.error("Unable to determine SchemaElement for dataType {}", dataType, e);
 			return;
 		}
 
@@ -187,7 +188,7 @@ public class OhifViewerEventListener
 										  boolean generateOnlyWhenProjectAnonEnabled) {
 		if (item == null)
 		{
-			logger.info("No item for ID: {} User: {} Trigger event: {}",
+			log.info("No item for ID: {} User: {} Trigger event: {}",
 					id, user.getUsername(), pipelineName);
 			return;
 		}
@@ -196,7 +197,7 @@ public class OhifViewerEventListener
 			String project = item.getProject();
 			if (!anonUtils.isProjectScriptEnabled(project))
 			{
-				logger.debug("No project anon for project: {}, skipping event: {}",
+				log.debug("No project anon for project: {}, skipping event: {}",
 						project, pipelineName);
 				return;
 			}
@@ -206,14 +207,14 @@ public class OhifViewerEventListener
 			for (final XnatSubjectassessordata expt : ((XnatSubjectdata) item)
 					.getExperiments_experiment(XnatImagesessiondata.SCHEMA_ELEMENT_NAME))
 			{
-				logger.debug("Rebuilding viewer JSON metadata for ID: {} User: {} Trigger event: {} (subject)",
+				log.debug("Rebuilding viewer JSON metadata for ID: {} User: {} Trigger event: {} (subject)",
 						expt.getId(), user.getUsername(), pipelineName);
 				generateJson((XnatImagesessiondata) expt, user);
 			}
 		}
 		else if (item instanceof XnatImagesessiondata)
 		{
-			logger.debug("Rebuilding viewer JSON metadata for ID: {} User: {} Trigger event: {}",
+			log.debug("Rebuilding viewer JSON metadata for ID: {} User: {} Trigger event: {}",
 					id, user.getUsername(), pipelineName);
 			generateJson((XnatImagesessiondata) item, user);
 		}
@@ -230,7 +231,7 @@ public class OhifViewerEventListener
 		}
 		catch (PluginException ex)
 		{
-			logger.warn(ex.getMessage(), ex);
+			log.warn(ex.getMessage(), ex);
 		}
 	}
 
@@ -242,13 +243,12 @@ public class OhifViewerEventListener
 			// a shared project. If null, then it was deleted from the parent project.
 			if (sessionData == null)
 			{
-				dwInputHandler.deleteDicomwebData(id);;
+				dwInputHandler.deleteDicomwebData(id);
 			}
 		}
 		catch (PluginException ex)
 		{
-			// logger.warn(ex.getMessage(), ex);
+			// log.warn(ex.getMessage(), ex);
 		}
 	}
-
 }
