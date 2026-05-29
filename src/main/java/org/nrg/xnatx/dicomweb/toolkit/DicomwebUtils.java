@@ -44,7 +44,7 @@ import org.nrg.xnatx.plugin.PluginCode;
 import org.nrg.xnatx.plugin.PluginException;
 import org.nrg.xnatx.plugin.PluginUtils;
 
-import javax.json.*;
+import jakarta.json.*;
 import java.io.*;
 import java.util.EnumSet;
 import java.util.HashMap;
