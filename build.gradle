@@ -61,12 +61,10 @@ dependencies {
     implementation "javax.servlet:javax.servlet-api"
 
     implementation("org.nrg.xnat:web") { transitive = false }
-    implementation("org.nrg.xnat:xnat-data-models") { transitive = false }
     implementation("org.nrg.xdat:core") { transitive = false }
     implementation("org.nrg:automation") { transitive = false }
     implementation("org.nrg:config") { transitive = false }
     implementation("org.nrg:dicomtools") { transitive = false }
-    implementation("org.nrg:dicom-xnat-mx") { transitive = false }
     implementation("org.nrg:dicom-xnat-sop") { transitive = false }
     implementation("org.nrg:framework")
     implementation("org.nrg:prefs") { transitive = false }
