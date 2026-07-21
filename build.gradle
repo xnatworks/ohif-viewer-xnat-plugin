@@ -3,8 +3,8 @@
  */
 buildscript {
     ext {
-        vXnat = "1.10.0"
-        vPluginVersion = "3.8.0"
+        vXnat = "1.10.1-SNAPSHOT"
+        vPluginVersion = "3.8.1-SNAPSHOT"
         vPluginDescription = "ICR/XNAT OHIF Viewer Plugin"
         vEtherJ = "1.1.6"
     }

@@ -1,5 +1,5 @@
 [submodule "ohifviewerxnat"]
 	path = ohifviewerxnat
-	url = https://bitbucket.org/icrimaginginformatics/ohif-viewer-xnat.git
+	url = https://github.com/xnatworks/ohif-viewer-xnat.git
 	branch = dev
 

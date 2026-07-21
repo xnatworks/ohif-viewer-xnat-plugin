@@ -23,6 +23,22 @@ mkdir -p "${VIEWER_TARGET}"
 
 cd "${VIEWER_ROOT}"
 echo "Building OHIF Viewer: "`pwd`
+
+# PLUGINS-294: the About dialog shows extension-xnat's package.json version.
+# Keep it in sync with the plugin version (single source of truth: build.gradle).
+PLUGIN_VERSION=$(sed -n 's/.*vPluginVersion = "\([^"]*\)".*/\1/p' "${PLUGIN_ROOT}/build.gradle" | head -1)
+VIEWER_PKG="${VIEWER_ROOT}/extensions/xnat/package.json"
+if [[ -n "${PLUGIN_VERSION}" && -f "${VIEWER_PKG}" ]]; then
+    VIEWER_VERSION=$(node -p "require('${VIEWER_PKG}').version")
+    if [[ "${VIEWER_VERSION}" != "${PLUGIN_VERSION}" ]]; then
+        echo "WARNING: extension-xnat version (${VIEWER_VERSION}) != plugin version (${PLUGIN_VERSION})"
+        echo "WARNING: injecting ${PLUGIN_VERSION} for this build; please sync extensions/xnat/package.json"
+        node -e "const fs=require('fs');const p=process.argv[1];const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=process.argv[2];fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');" "${VIEWER_PKG}" "${PLUGIN_VERSION}"
+    fi
+else
+    echo "WARNING: could not determine plugin version or find ${VIEWER_PKG}; skipping version injection"
+fi
+
 yarn config set workspaces-experimental true
 yarn install --check-files
 yarn run build:xnat
