@@ -44,7 +44,7 @@ import org.nrg.xnatx.dicomweb.conf.DicomwebDeviceConfiguration;
 import org.nrg.xnatx.dicomweb.conf.privateelements.PrivateTag;
 import org.nrg.xnatx.dicomweb.toolkit.DicomwebUtils;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Objects;

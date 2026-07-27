@@ -39,7 +39,7 @@ import org.nrg.framework.orm.hibernate.AbstractHibernateEntity;
 import org.nrg.xnatx.dicomweb.conf.DicomwebDeviceConfiguration;
 import org.nrg.xnatx.dicomweb.toolkit.DicomwebUtils;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.IOException;
 
 @MappedSuperclass

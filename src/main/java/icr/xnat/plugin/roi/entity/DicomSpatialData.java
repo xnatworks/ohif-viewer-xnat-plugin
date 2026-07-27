@@ -35,7 +35,7 @@
 package icr.xnat.plugin.roi.entity;
 
 import icr.etherj.StringUtils;
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.nrg.framework.orm.hibernate.AbstractHibernateEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

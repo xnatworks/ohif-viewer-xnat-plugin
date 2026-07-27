@@ -44,7 +44,7 @@ import org.nrg.xnatx.dicomweb.conf.AttributeFilter;
 import org.nrg.xnatx.dicomweb.conf.DicomwebDeviceConfiguration;
 import org.nrg.xnatx.dicomweb.entity.util.QueryAttribute;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Objects;

@@ -34,7 +34,7 @@
  *********************************************************************/
 package icr.xnat.plugin.roi.entity;
 
-import javax.persistence.Entity;
+import jakarta.persistence.Entity;
 import org.nrg.framework.orm.hibernate.AbstractHibernateEntity;
 
 /**

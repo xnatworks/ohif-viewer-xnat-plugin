@@ -35,7 +35,7 @@
 package org.nrg.xnatx.roi.event.listeners;
 
 import org.nrg.xnatx.roi.service.RoiService;
-import javax.inject.Inject;
+import jakarta.inject.Inject;
 import org.nrg.xdat.om.WrkWorkflowdata;
 import org.nrg.xft.event.entities.WorkflowStatusEvent;
 import org.nrg.xft.event.persist.PersistentWorkflowUtils;

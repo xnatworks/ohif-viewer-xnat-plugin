@@ -3,7 +3,7 @@
  */
 buildscript {
     ext {
-        vXnat = "1.10.1-SNAPSHOT"
+        vXnat = "1.11.0-SNAPSHOT"   // jakarta / Tomcat 10 line
         vPluginVersion = "3.8.1-SNAPSHOT"
         vPluginDescription = "ICR/XNAT OHIF Viewer Plugin"
         vEtherJ = "1.1.6"
@@ -27,7 +27,9 @@ version = vPluginVersion
 description = vPluginDescription
 
 repositories {
-    mavenLocal()
+    // Scope mavenLocal to org.nrg.* so a locally-published SNAPSHOT of core is consumed, without
+    // shadowing partial third-party artifacts (e.g. ehcache-*-jakarta classifiers). See migration guide.
+    mavenLocal { content { includeGroupByRegex 'org\\.nrg.*' } }
     maven { url = "https://nrgxnat.jfrog.io/nrgxnat/libs-release" }
     maven { url = "https://nrgxnat.jfrog.io/nrgxnat/libs-snapshot" }
     maven { url = "https://www.dcm4che.org/maven2" }
@@ -58,9 +60,11 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation "javax.servlet:javax.servlet-api"
+    compileOnly "jakarta.servlet:jakarta.servlet-api"
 
     implementation("org.nrg.xnat:web") { transitive = false }
+    // xnat-data-models and dicom-xnat-mx were merged into org.nrg.xnat:web in 1.11.0 (no longer published
+    // separately); their classes come from web above. See migration guide §3.
     implementation("org.nrg.xdat:core") { transitive = false }
     implementation("org.nrg:automation") { transitive = false }
     implementation("org.nrg:config") { transitive = false }
@@ -69,16 +73,21 @@ dependencies {
     implementation("org.nrg:framework")
     implementation("org.nrg:prefs") { transitive = false }
 
-    implementation("turbine:turbine") { transitive = false }
-    implementation("org.apache.velocity:velocity") { transitive = false }
-    implementation "javax.inject:javax.inject:1"
+    // 1.11.0 coordinate renames: turbine:turbine -> org.apache.turbine:turbine (7.0),
+    // org.apache.velocity:velocity -> org.apache.velocity:velocity-engine-core (2.4.1)
+    implementation("org.apache.turbine:turbine") { transitive = false }
+    implementation("org.apache.velocity:velocity-engine-core") { transitive = false }
+    implementation "jakarta.inject:jakarta.inject-api:2.0.1"
 
     implementation "org.springframework:spring-web"
     implementation "org.springframework:spring-webmvc"
     implementation "org.springframework:spring-context"
     implementation "org.springframework.security:spring-security-core"
 
-    implementation "io.springfox:springfox-swagger2"
+    // springfox is dead on Spring 6. The source only uses io.swagger.annotations.* (@Api/@ApiOperation/
+    // @ApiParam/@ApiResponse(s)/@ApiModelProperty); provide those directly. Runtime OpenAPI is served by
+    // core's springdoc. See migration guide.
+    implementation "io.swagger:swagger-annotations:1.5.20"
     implementation "commons-io:commons-io"
     implementation "commons-codec:commons-codec"
     implementation "org.apache.commons:commons-lang3"
@@ -131,13 +140,22 @@ sourceSets {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    // Pin the toolchain to 21: the Gradle daemon may run a newer JDK that Lombok can't process, and old
+    // jars can trip JDK 22+'s strict zip64 CEN validation. Match core.
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
 }
 
 compileJava {
     dependsOn xnatDataBuilder
-    options.fork = false
+    options.fork = true   // a cross-JDK toolchain must fork
+}
+
+// Spring Framework 6 (Spring MVC) no longer discovers method parameter names from bytecode debug info, so
+// the xapi @RestController handlers here (@RequestParam / @PathVariable without an explicit name) resolve
+// only when compiled with javac -parameters. Core sets this in its buildSrc convention; this standalone
+// plugin build must opt in too, or those endpoints 500 at request time. See migration guide.
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << '-parameters'
 }
 
 jar {

@@ -2,6 +2,7 @@ package org.nrg.xnatx.dicomweb.toolkit;
 
 import icr.etherj.Displayable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 
 import java.io.PrintStream;
@@ -146,15 +147,12 @@ public class WebApplicationException extends RuntimeException
 
 	private static String computeExceptionMessage(ResponseEntity<?> response)
 	{
-		final HttpStatus status;
-		if (response != null)
-		{
-			status = response.getStatusCode();
-		}
-		else
-		{
-			status = HttpStatus.INTERNAL_SERVER_ERROR;
-		}
-		return "HTTP " + status.value() + ' ' + status.getReasonPhrase();
+		// Spring 6: ResponseEntity.getStatusCode() returns HttpStatusCode (interface), not HttpStatus.
+		// value() lives on HttpStatusCode; getReasonPhrase() is only on the HttpStatus enum, so resolve
+		// the numeric code back to an HttpStatus (may be null for non-standard codes).
+		final HttpStatusCode status = (response != null) ? response.getStatusCode() : HttpStatus.INTERNAL_SERVER_ERROR;
+		final HttpStatus resolved = HttpStatus.resolve(status.value());
+		final String reason = (resolved != null) ? resolved.getReasonPhrase() : "";
+		return "HTTP " + status.value() + ' ' + reason;
 	}
 }
