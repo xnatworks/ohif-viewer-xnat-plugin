@@ -3,8 +3,8 @@
  */
 buildscript {
     ext {
-        vXnat = "1.10.0"
-        vPluginVersion = "3.8.0"
+        vXnat = "1.10.1-SNAPSHOT"
+        vPluginVersion = "3.8.1-SNAPSHOT"
         vPluginDescription = "ICR/XNAT OHIF Viewer Plugin"
         vEtherJ = "1.1.6"
     }
@@ -61,12 +61,10 @@ dependencies {
     implementation "javax.servlet:javax.servlet-api"
 
     implementation("org.nrg.xnat:web") { transitive = false }
-    implementation("org.nrg.xnat:xnat-data-models") { transitive = false }
     implementation("org.nrg.xdat:core") { transitive = false }
     implementation("org.nrg:automation") { transitive = false }
     implementation("org.nrg:config") { transitive = false }
     implementation("org.nrg:dicomtools") { transitive = false }
-    implementation("org.nrg:dicom-xnat-mx") { transitive = false }
     implementation("org.nrg:dicom-xnat-sop") { transitive = false }
     implementation("org.nrg:framework")
     implementation("org.nrg:prefs") { transitive = false }

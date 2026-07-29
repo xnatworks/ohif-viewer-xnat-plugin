@@ -23,11 +23,30 @@ mkdir -p "${VIEWER_TARGET}"
 
 cd "${VIEWER_ROOT}"
 echo "Building OHIF Viewer: "`pwd`
+
 yarn config set workspaces-experimental true
 yarn install --check-files
+
+# PLUGINS-294: the About dialog shows extension-xnat's package.json version.
+# Keep it in sync with the plugin version (single source of truth: build.gradle).
+# Injection must run AFTER yarn install: a prerelease version (x.y.z-SNAPSHOT)
+# does not satisfy the "^3.x.0" ranges other workspace packages use, which
+# would break workspace resolution during install.
+PLUGIN_VERSION=$(sed -n 's/.*vPluginVersion = "\([^"]*\)".*/\1/p' "${PLUGIN_ROOT}/build.gradle" | head -1)
+VIEWER_PKG="${VIEWER_ROOT}/extensions/xnat/package.json"
+if [[ -n "${PLUGIN_VERSION}" && -f "${VIEWER_PKG}" ]]; then
+    VIEWER_VERSION=$(node -p "require('${VIEWER_PKG}').version")
+    if [[ "${VIEWER_VERSION}" != "${PLUGIN_VERSION}" ]]; then
+        echo "INFO: injecting plugin version ${PLUGIN_VERSION} into extension-xnat (was ${VIEWER_VERSION})"
+        node -e "const fs=require('fs');const p=process.argv[1];const j=JSON.parse(fs.readFileSync(p,'utf8'));j.version=process.argv[2];fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');" "${VIEWER_PKG}" "${PLUGIN_VERSION}"
+    fi
+else
+    echo "WARNING: could not determine plugin version or find ${VIEWER_PKG}; skipping version injection"
+fi
+
 yarn run build:xnat
 if [ $? -ne 0 ]; then
-	exit
+	exit 1
 fi
 cd "${VIEWER_DIST}"
 cp -rf * "${VIEWER_TARGET}"
