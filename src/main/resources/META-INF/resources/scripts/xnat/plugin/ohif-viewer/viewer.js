@@ -192,6 +192,9 @@ function checkSessionJSON(newTab, projectId, subjectId, experimentId, parentProj
     } else if (viewerSession.type === 'DICOMWEB') {
       return processDicomwebSession(projectId, subjectId, experimentId);
     }
+    // Neither type resolved: throw instead of returning undefined (which becomes /VIEWERundefined).
+    throw new Error('Unsupported viewer session type for experiment ' + experimentId +
+      ': "' + (viewerSession && viewerSession.type) + '".');
   }).then(viewerParams => {
     return openViewer(viewerParams, newTab, parentProjectId);
   }).catch(error => {
@@ -247,6 +250,10 @@ function getSessionViewerParams(projectId, subjectId, experimentId) {
 
       return params;
     }
+    // Do not fall through returning undefined: that becomes '/VIEWER' + undefined -> /VIEWERundefined.
+    // A non-200 here typically means a missing subjectId produced a malformed archive URL. Surface it.
+    throw new Error('Unable to resolve viewer params for experiment ' + experimentId +
+      ' (subjectId "' + subjectId + '"): archive session request returned status ' + result.status + '.');
   });
 }
 
@@ -358,6 +365,12 @@ function generateViewerSessionDicomweb(dwUrl) {
 }
 
 function openViewer(params, newTab, parentProjectId) {
+  if (!params) {
+    // Guard: never navigate to '/VIEWER' + undefined (-> /VIEWERundefined, a 404). A falsy params
+    // means an upstream step (session-JSON resolution or subject/session context) did not resolve.
+    throw new Error('OHIF viewer launch aborted: viewer parameters are undefined ' +
+      '(missing subject/session context).');
+  }
   if (parentProjectId) {
     params = params + '&parentProjectId=' + parentProjectId;
   }
